@@ -29,7 +29,7 @@ class UserController extends Controller
 
         return redirect()->route('user.login')->with('success', 'User registered successfully!');
     }
-    
+
 
     public function login(Request $request)
     {
@@ -85,5 +85,7 @@ public function destroy($id)
     $user->delete();
     return redirect()->back()->with('success', 'User deleted!');
 }
+
+
 
 }

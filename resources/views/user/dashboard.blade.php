@@ -15,7 +15,7 @@
             <a href="#" class="tab-link" data-target="attendance"><i class="fas fa-calendar-check"></i> Attendance</a>
             <a href="#" class="tab-link" data-target="scan"><i class="fas fa-fingerprint"></i> Fingerprint Scan</a>
         </div>
-           <a href="{{ route('logout') }}" class="logout-btn"> <i class="fas fa-sign-out-alt"></i> Logout</a>
+        <a href="{{ route('logout') }}" class="logout-btn"> <i class="fas fa-sign-out-alt"></i> Logout</a>
     </div>
 
     {{-- Main content --}}
@@ -57,12 +57,18 @@
                     </tr>
                 </thead>
                 <tbody id="attendance-body">
-                    <!-- Dynamically loaded -->
+                    @forelse(auth()->user()->attendances as $attendance)
+                        <tr>
+                            <td>{{ $attendance->date }}</td>
+                            <td>{{ $attendance->time_in ?? '-' }}</td>
+                            <td>{{ $attendance->time_out ?? '-' }}</td>
+                            <td>{{ $attendance->status }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="4" style="text-align:center;">No attendance records yet.</td></tr>
+                    @endforelse
                 </tbody>
             </table>
-            <p id="no-attendance-msg" style="color: #666; margin-top: 10px;">
-                No attendance records yet.
-            </p>
         </div>
 
         {{-- Fingerprint Scan --}}
@@ -79,31 +85,93 @@
 
     </div>
 </div>
-
 @endsection
 
 @section('scripts')
 <script>
 document.addEventListener("DOMContentLoaded", function() {
+    // ==========================
+    // Sidebar tab switching
+    // ==========================
     const links = document.querySelectorAll(".tab-link");
     const sections = document.querySelectorAll(".section");
 
     links.forEach(link => {
         link.addEventListener("click", function(e) {
             e.preventDefault();
-
             links.forEach(l => l.classList.remove("active"));
             sections.forEach(s => s.classList.remove("active"));
-
             link.classList.add("active");
-
             const target = document.getElementById(link.dataset.target);
             if(target) target.classList.add("active");
         });
     });
+
+    // ==========================
+    // Load attendance on page load
+    // ==========================
+    function loadAttendance() {
+        fetch('{{ route("user.attendance") }}')
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById('attendance-body');
+                const noMsg = document.getElementById('no-attendance-msg');
+                tbody.innerHTML = '';
+
+                if(data.length === 0){
+                    if(noMsg) noMsg.style.display = 'block';
+                    return;
+                }
+
+                if(noMsg) noMsg.style.display = 'none';
+
+                data.forEach(record => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${record.date}</td>
+                        <td>${record.time_in ?? '-'}</td>
+                        <td>${record.time_out ?? '-'}</td>
+                        <td>${record.status}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            })
+            .catch(err => console.error('Error fetching attendance:', err));
+    }
+
+    // Load attendance initially
+    loadAttendance();
+
+    // ==========================
+    // Simulate Scan Button
+    // ==========================
+    const simulateBtn = document.getElementById('simulate-scan-btn');
+    const feedback = document.getElementById('scan-feedback');
+
+    simulateBtn.addEventListener('click', function() {
+        fetch('{{ route("user.simulateAttendance") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({})
+        })
+        .then(res => res.json())
+        .then(data => {
+            feedback.style.color = 'green';
+            feedback.textContent = `${data.message} (Time In: ${data.time_in}, Time Out: ${data.time_out ?? '-'})`;
+
+            // Refresh the attendance table dynamically
+            loadAttendance();
+        })
+        .catch(err => {
+            feedback.style.color = 'red';
+            feedback.textContent = 'Error marking attendance.';
+            console.error(err);
+        });
+    });
 });
 </script>
-
-
 
 @endsection

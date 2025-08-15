@@ -6,7 +6,8 @@ use App\Http\Controllers\UserDashboardController;
 use App\Http\Controllers\DepartmentController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function(){
+// Public routes
+Route::get('/', function() {
     return view("welcome");
 })->name("home");
 
@@ -16,14 +17,20 @@ Route::post("/register", [UserController::class, 'register'])->name('user.store'
 Route::get("/login", [UserController::class, 'loginPage'])->name('login');
 Route::post("/login", [UserController::class, 'login'])->name('user.login');
 
-// USER ROUTES
-Route::middleware(["auth",'role:user'])->group(function(){
+// ------------------- USER ROUTES -------------------
+Route::middleware(["auth", 'role:user'])->group(function(){
+
+    // Dashboard
     Route::get("/dashboard", [UserDashboardController::class,"index"])->name("user.dashboard");
+
+    // Attendance records (AJAX)
     Route::get('/attendance', [UserDashboardController::class, 'getAttendance'])->name('user.attendance');
-    Route::post('/mark-attendance', [UserDashboardController::class, 'markAttendance'])->name('user.markAttendance');
+
+    // Mark attendance (simulate scan)
+    Route::post('/mark-attendance', [UserDashboardController::class, 'markAttendance'])->name('user.simulateAttendance');
 });
 
-// ADMIN ROUTES
+// ------------------- ADMIN ROUTES -------------------
 Route::middleware(["auth",'role:admin'])->group(function(){
 
     // Admin Dashboard
@@ -34,14 +41,13 @@ Route::middleware(["auth",'role:admin'])->group(function(){
     Route::patch('/admin/users/update/{id}', [AdminDashboardController::class, 'updateUser'])->name('admin.users.update');
     Route::delete('/admin/users/delete/{id}', [AdminDashboardController::class, 'deleteUser'])->name('admin.users.destroy');
 
-
     // DEPARTMENTS CRUD
     Route::post('/admin/departments/store', [DepartmentController::class, 'store'])->name('admin.departments.store');
-    Route::post('/admin/departments/update/{id}', [DepartmentController::class, 'update'])->name('departments.update');
+    Route::post('/admin/departments/update/{id}', [DepartmentController::class, 'update'])->name('admin.departments.update');
     Route::delete('/admin/departments/delete/{id}', [DepartmentController::class, 'destroy'])->name('admin.departments.delete');
 });
 
-// Logout
+// ------------------- LOGOUT -------------------
 Route::get('/logout', function () {
     session()->flush();
     return redirect('/login');
