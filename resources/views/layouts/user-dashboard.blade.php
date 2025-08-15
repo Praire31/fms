@@ -3,11 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>@yield('title',"Finger Print System")</title>
+    <title>@yield('title', 'Fingerprint System')</title>
     <link rel="stylesheet" href="{{ asset('css/userdashboard.css') }}">
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </head>
 <body>
-    @yield("user-content")
+    @yield('user-content')
+
+    {{-- Include child scripts at bottom --}}
+    @yield('scripts')
 </body>
 </html>

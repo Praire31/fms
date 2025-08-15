@@ -70,7 +70,7 @@ body {
     padding: 30px;
     min-height: 100vh;
     background-color: #f4f4f4;
-
+    display: block;
     width: calc(100% - 240px);       /* exactly fills remaining space */
     display: flex;
     flex-direction: column; 
