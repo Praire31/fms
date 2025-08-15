@@ -5,11 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $title ?? 'Fingerprint Attendance System' }}</title>
+
+    {{-- <link rel="stylesheet" href="{{ asset('css/dashboard.css') }}"> --}}
+    
     <style>
         body {
             margin: 0;
             font-family: Arial, sans-serif;
-            background: linear-gradient(to right, #163d2a, #113320);
+            background: linear-gradient(to bottom, #4a90e2, #FF7F50);
             color: white;
             text-align: center;
         }
@@ -66,7 +69,6 @@
 
     <header>
         <h1>Fingerprint Based Attendance Management  System</h1>
-        <p>Secure and Reliable Attendance Tracking</p>
     </header>
 
     <div class="content">

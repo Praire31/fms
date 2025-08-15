@@ -56,4 +56,33 @@ class UserController extends Controller
         session()->forget(['user_id', 'user_name']);
         return redirect()->route('user.login');
     }
+
+    // UserController.php
+
+public function store(Request $request)
+{
+    $request->validate([
+        'username' => 'required',
+        'email' => 'required|email|unique:users,email',
+        'password' => 'required',
+        'department_id' => 'required|exists:departments,id'
+    ]);
+
+    User::create([
+        'username' => $request->username,
+        'email' => $request->email,
+        'password' => bcrypt($request->password),
+        'department_id' => $request->department_id,
+    ]);
+
+    return redirect()->back()->with('success', 'User added successfully!');
+}
+
+public function destroy($id)
+{
+    $user = User::findOrFail($id);
+    $user->delete();
+    return redirect()->back()->with('success', 'User deleted!');
+}
+
 }

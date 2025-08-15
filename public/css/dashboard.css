@@ -1,0 +1,149 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 240px;
+  background-color: #005580;
+  color: white;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* Align items to left */
+  position: fixed; /* Keep it fixed on scroll */
+  top: 0;
+  left: 0;
+  height: 100%;
+}
+
+.sidebar h2 {
+  margin-bottom: 30px;
+  font-size: 22px;
+}
+
+.sidebar a,
+.sidebar label {
+  color: white;
+  text-decoration: none;
+  padding: 10px 15px;
+  display: block;
+  width: 100%; /* Full clickable width */
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.sidebar a i {
+  margin-right: 10px;
+}
+
+.sidebar a:hover,
+.sidebar label:hover {
+  background-color: #0077aa;
+  padding-left: 20px; /* Slight shift for hover effect */
+}
+
+.dropdown-content {
+  display: none;
+  padding-left: 25px;
+}
+
+input[type='checkbox'] {
+  display: none;
+}
+
+input[type='checkbox']:checked + label + .dropdown-content {
+  display: block;
+}
+
+.dropdown-content a {
+  font-size: 14px;
+}
+
+/* Main content */
+.main-content {
+  flex-grow: 1;
+  padding: 30px;
+  min-height: 100vh;
+  background-color: #f4f4f4;
+  overflow-y: auto;
+  margin-left: 240px; /* Push main content to right of sidebar */
+}
+
+.content-section {
+  display: none;
+}
+
+.content-section.active {
+  display: block;
+}
+
+/* Cards */
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 6px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.dashboard-cards {
+  margin-top: 30px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.card h3 {
+  color: #555;
+  margin-bottom: 10px;
+}
+
+.card .number {
+  font-size: 24px;
+  font-weight: bold;
+  color: #007bff;
+}
+
+/* Table */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+thead {
+  background-color: #0077aa;
+  color: white;
+}
+
+/* Logout */
+.logout {
+  margin-top: auto;
+  color: #ffdddd;
+  font-weight: bold;
+}
+
+/* Edit row styles */
+.edit-row {
+  background-color: #ffffe0;
+}
+
+.edit-row input,
+.edit-row select {
+  width: 100%;
+  padding: 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
