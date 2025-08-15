@@ -21,6 +21,7 @@ Route::post("/login", [UserController::class, 'login'])->name('user.login');
 Route::middleware(["auth",'role:user'])->group(function(){
     Route::get("/dashboard", [UserDashboardController::class,"index"])->name("user.dashboard");
     Route::get('/attendance', [UserDashboardController::class, 'getAttendance'])->name('user.attendance');
+    
     Route::post('/mark-attendance', [UserDashboardController::class, 'markAttendance'])->name('user.markAttendance');
 });
 
