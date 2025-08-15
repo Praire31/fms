@@ -29,6 +29,7 @@ class UserController extends Controller
 
         return redirect()->route('user.login')->with('success', 'User registered successfully!');
     }
+    
 
     public function login(Request $request)
     {

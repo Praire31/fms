@@ -25,6 +25,7 @@
             <a href="{{ route('logout') }}" class="logout"> <i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
 
+        
         <div class="main-content">
             {{-- Profile Section --}}
             <div id="profile" class="content-section active">

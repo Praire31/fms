@@ -38,3 +38,4 @@ Route::get('/logout', function () {
     session()->flush(); // Clear all session data
     return redirect('/userlogin'); // Redirect to your login page
 })->name('logout');
+

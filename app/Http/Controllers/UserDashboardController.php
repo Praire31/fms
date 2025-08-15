@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Attendance;
 
+
 class UserDashboardController extends Controller
 {
     public function index(){

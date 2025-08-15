@@ -85,6 +85,7 @@ input[type='checkbox']:checked + label + .dropdown-content {
   display: block;
 }
 
+
 /* Cards */
 .card {
   background: white;

@@ -26,3 +26,4 @@ public function down()
 }
 
 };
+

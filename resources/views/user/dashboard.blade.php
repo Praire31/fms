@@ -20,6 +20,7 @@
             <button class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
         </form>
     </div>
+    
 
     {{-- Main content --}}
     <div class="main-content">   
