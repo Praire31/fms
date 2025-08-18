@@ -38,18 +38,18 @@ class UserController extends Controller
             'password' => 'required',
         ]);
         
-        if(Auth::attempt($credentials)){
-            $request->session()->regenerate();
-            $user = Auth::user();
-            if($user->role == 'admin'){
-                return redirect()->route('admin.dashboard');
-            }else{
-                return redirect()->route('user.dashboard');
-            }
-            // session(['user_id' => $user->id, 'user_name' => $user->name]);
-        }else{
-            return back()->with('error', 'Invalid credentials');
-        }
+        if (auth()->attempt($credentials)) {
+
+    $user = auth()->user();
+
+    // Check if user must change password
+    if ($user->role === 'user' && $user->force_password_change) {
+        return redirect()->route('force.change.password');
+    }
+
+    // Normal redirection
+    return redirect()->route($user->role === 'admin' ? 'admin.dashboard' : 'user.dashboard');
+}
     }
 
     public function logout()

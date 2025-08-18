@@ -9,16 +9,19 @@ use App\Models\Attendance;
 
 class UserDashboardController extends Controller
 {
-    public function index(){
+    public function index()
+    {
         return view("user.dashboard");
     }
 
-    public function getAttendance() {
-        $attendance = Attendance::where('user_id', Auth::id())->get(['date','time_in','time_out','status']);
+    public function getAttendance()
+    {
+        $attendance = Attendance::where('user_id', Auth::id())->get(['date', 'time_in', 'time_out', 'status']);
         return response()->json($attendance);
     }
 
-    public function markAttendance(Request $request) {
+    public function markAttendance(Request $request)
+    {
         $user = Auth::user();
 
         // Simplified logic
@@ -40,4 +43,26 @@ class UserDashboardController extends Controller
             'status' => $record->status,
         ]);
     }
+   // Show force change password form
+public function showForceChangePassword()
+{
+    return view('user.force_change_password');
+}
+
+// Update password
+public function updateForceChangePassword(Request $request)
+{
+    $request->validate([
+        'password' => 'required|min:6|confirmed',
+    ]);
+
+    $user = auth()->user();
+    $user->password = bcrypt($request->password);
+    $user->force_password_change = 0; // Mark as changed
+    $user->save();
+
+    return redirect()->route('user.dashboard')->with('success', 'Password updated successfully!');
+}
+
+
 }
