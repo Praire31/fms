@@ -6,7 +6,7 @@ use App\Http\Controllers\UserDashboardController;
 use App\Http\Controllers\DepartmentController;
 use Illuminate\Support\Facades\Route;
 
-// Public routes
+// ------------------- PUBLIC ROUTES -------------------
 Route::get('/', function() {
     return view("welcome");
 })->name("home");
@@ -41,9 +41,13 @@ Route::middleware(["auth",'role:admin'])->group(function(){
     Route::patch('/admin/users/update/{id}', [AdminDashboardController::class, 'updateUser'])->name('admin.users.update');
     Route::delete('/admin/users/delete/{id}', [AdminDashboardController::class, 'deleteUser'])->name('admin.users.destroy');
 
+    // ATTENDANCE DELETION
+    Route::delete('/admin/attendance/delete', [AdminDashboardController::class, 'deleteAttendance'])->name('admin.attendance.delete');
+    Route::post('/admin/attendance/delete-filtered', [AdminDashboardController::class, 'deleteFilteredAttendance'])->name('admin.attendance.deleteFiltered');
+
     // DEPARTMENTS CRUD
     Route::post('/admin/departments/store', [DepartmentController::class, 'store'])->name('admin.departments.store');
-    Route::post('/admin/departments/update/{id}', [DepartmentController::class, 'update'])->name('admin.departments.update');
+    Route::patch('/admin/departments/update/{id}', [DepartmentController::class, 'update'])->name('admin.departments.update');
     Route::delete('/admin/departments/delete/{id}', [DepartmentController::class, 'destroy'])->name('admin.departments.delete');
 });
 

@@ -149,28 +149,34 @@ document.addEventListener("DOMContentLoaded", function() {
     const feedback = document.getElementById('scan-feedback');
 
     simulateBtn.addEventListener('click', function() {
-        fetch('{{ route("user.simulateAttendance") }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            body: JSON.stringify({})
-        })
-        .then(res => res.json())
-        .then(data => {
+    fetch('{{ route("user.simulateAttendance") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success){
             feedback.style.color = 'green';
-            feedback.textContent = `${data.message} (Time In: ${data.time_in}, Time Out: ${data.time_out ?? '-'})`;
+            feedback.textContent = data.message + 
+                ` (Time In: ${data.attendance.time_in ?? '-'}, Time Out: ${data.attendance.time_out ?? '-'}, Status: ${data.attendance.status})`;
 
-            // Refresh the attendance table dynamically
+            // Refresh table
             loadAttendance();
-        })
-        .catch(err => {
+        } else {
             feedback.style.color = 'red';
-            feedback.textContent = 'Error marking attendance.';
-            console.error(err);
-        });
+            feedback.textContent = data.message;
+        }
+    })
+    .catch(err => {
+        feedback.style.color = 'red';
+        feedback.textContent = 'Error marking attendance.';
+        console.error(err);
     });
+});
 });
 </script>
 
