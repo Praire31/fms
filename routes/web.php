@@ -17,8 +17,17 @@ Route::post("/register", [UserController::class, 'register'])->name('user.store'
 Route::get("/login", [UserController::class, 'loginPage'])->name('login');
 Route::post("/login", [UserController::class, 'login'])->name('user.login');
 
+// ------------------- FORCE PASSWORD CHANGE -------------------
+// Only authenticated users can see/change password
+Route::middleware(['auth'])->group(function () {
+    Route::get('/force-change-password', [UserDashboardController::class, 'showForceChangePassword'])
+        ->name('force.change.password');
+    Route::post('/force-change-password', [UserDashboardController::class, 'updateForceChangePassword'])
+        ->name('force.change.password.update');
+});
+
 // ------------------- USER ROUTES -------------------
-Route::middleware(["auth", 'role:user'])->group(function(){
+Route::middleware(["auth", 'role:user', 'force.password'])->group(function(){
 
     // Dashboard
     Route::get("/dashboard", [UserDashboardController::class,"index"])->name("user.dashboard");

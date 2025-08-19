@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Attendance;
 use App\Models\Audit; // Audit model
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Hash;
 
 class UserDashboardController extends Controller
 {
@@ -137,5 +138,25 @@ class UserDashboardController extends Controller
                 'department' => $record->user->department->name ?? '-',
             ]
         ]);
+    }
+
+     public function showForceChangePassword()
+    {
+        return view('auth.force-change-password');
+    }
+
+    // Handle password update
+    public function updateForceChangePassword(Request $request)
+    {
+        $request->validate([
+            'password' => 'required|min:6|confirmed',
+        ]);
+
+        $user = Auth::user();
+        $user->password = Hash::make($request->password);
+        $user->force_password_change = false; // disable force change after update
+        $user->save();
+
+        return redirect()->route('user.dashboard')->with('success', 'Password changed successfully!');
     }
 }

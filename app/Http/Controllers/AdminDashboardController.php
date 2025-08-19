@@ -72,6 +72,7 @@ class AdminDashboardController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'department_id' => $request->department_id,
+            'force_password_change' => true,
         ]);
 
         // Log audit
