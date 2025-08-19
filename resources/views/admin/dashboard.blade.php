@@ -14,12 +14,21 @@
             <input type="checkbox" id="manage-toggle" />
             <label for="manage-toggle"><i class="fas fa-cogs"></i> Manage ▼</label>
             <div class="dropdown-content">
+                @can('users.manage')
                 <a href="#" class="tab-link" data-target="users"><i class="fas fa-users"></i> Users</a>
-                <a href="#" class="tab-link" data-target="departments"><i class="fas fa-building"></i> Departments</a>
-            </div>
+                @endcan
 
+                @can('departments.manage')
+                <a href="#" class="tab-link" data-target="departments"><i class="fas fa-building"></i> Departments</a>
+                @endcan
+            </div>
+             @can('attendance.view')   
             <a href="#" class="tab-link" data-target="reports"><i class="fas fa-calendar-check"></i> Attendance Reports</a>
+            @endcan
+
+            @can('audits.view')
             <a href="#" class="tab-link" data-target="audits"><i class="fas fa-file-alt"></i> Audits</a>
+            @endcan
             <a href="{{ route('logout') }}" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
 
