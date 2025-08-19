@@ -10,10 +10,21 @@
     <div class="sidebar">
         <div class="sidebar-top">
             <h2>User Panel</h2>
+            {{-- Dashboard always visible --}}
             <a href="#" class="tab-link active" data-target="welcome"><i class="fas fa-home"></i> Dashboard</a>
+
+            {{-- Profile always visible --}}
             <a href="#" class="tab-link" data-target="profile"><i class="fas fa-user"></i> Profile</a>
-            <a href="#" class="tab-link" data-target="attendance"><i class="fas fa-calendar-check"></i> Attendance</a>
-            <a href="#" class="tab-link" data-target="scan"><i class="fas fa-fingerprint"></i> Fingerprint Scan</a>
+
+            {{-- Attendance only for users with permission --}}
+            @can('attendance.view')
+                <a href="#" class="tab-link" data-target="attendance"><i class="fas fa-calendar-check"></i> Attendance</a>
+            @endcan
+
+            {{-- Fingerprint Scan only for users with permission --}}
+            @can('attendance.create')
+                <a href="#" class="tab-link" data-target="scan"><i class="fas fa-fingerprint"></i> Fingerprint Scan</a>
+            @endcan
         </div>
         <a href="{{ route('logout') }}" class="logout-btn"> <i class="fas fa-sign-out-alt"></i> Logout</a>
     </div>
@@ -41,10 +52,12 @@
                 <p><strong>User ID:</strong> {{ auth()->user()->id }}</p>
                 <p><strong>Username:</strong> {{ auth()->user()->username ?? auth()->user()->name }}</p>
                 <p><strong>Email:</strong> {{ auth()->user()->email }}</p>
+               
             </div>
         </div>
 
         {{-- Attendance --}}
+        @can('attendance.view')
         <div id="attendance" class="section">
             <h3>Attendance History</h3>
             <table>
@@ -70,8 +83,10 @@
                 </tbody>
             </table>
         </div>
+        @endcan
 
         {{-- Fingerprint Scan --}}
+        @can('attendance.create')
         <div id="scan" class="section">
             <div class="scan-container">
                 <h3><i class="fas fa-fingerprint"></i> Fingerprint Scan</h3>
@@ -82,6 +97,7 @@
                 </div>
             </div>
         </div>
+        @endcan
 
     </div>
 </div>
@@ -115,15 +131,14 @@ document.addEventListener("DOMContentLoaded", function() {
             .then(res => res.json())
             .then(data => {
                 const tbody = document.getElementById('attendance-body');
-                const noMsg = document.getElementById('no-attendance-msg');
                 tbody.innerHTML = '';
 
                 if(data.length === 0){
-                    if(noMsg) noMsg.style.display = 'block';
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = '<td colspan="4" style="text-align:center;">No attendance records yet.</td>';
+                    tbody.appendChild(tr);
                     return;
                 }
-
-                if(noMsg) noMsg.style.display = 'none';
 
                 data.forEach(record => {
                     const tr = document.createElement('tr');
@@ -148,36 +163,39 @@ document.addEventListener("DOMContentLoaded", function() {
     const simulateBtn = document.getElementById('simulate-scan-btn');
     const feedback = document.getElementById('scan-feedback');
 
-    simulateBtn.addEventListener('click', function() {
-    fetch('{{ route("user.simulateAttendance") }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        },
-        body: JSON.stringify({})
-    })
-    .then(res => res.json())
-    .then(data => {
-        if(data.success){
-            feedback.style.color = 'green';
-            feedback.textContent = data.message + 
-                ` (Time In: ${data.attendance.time_in ?? '-'}, Time Out: ${data.attendance.time_out ?? '-'}, Status: ${data.attendance.status})`;
+    if(simulateBtn){
+        simulateBtn.addEventListener('click', function() {
+            fetch('{{ route("user.simulateAttendance") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success){
+                    feedback.style.color = 'green';
+                    feedback.textContent = data.message + 
+                        ` (Time In: ${data.attendance.time_in ?? '-'}, Time Out: ${data.attendance.time_out ?? '-'}, Status: ${data.attendance.status})`;
 
-            // Refresh table
-            loadAttendance();
-        } else {
-            feedback.style.color = 'red';
-            feedback.textContent = data.message;
-        }
-    })
-    .catch(err => {
-        feedback.style.color = 'red';
-        feedback.textContent = 'Error marking attendance.';
-        console.error(err);
-    });
-});
+                    // Refresh table
+                    loadAttendance();
+                } else {
+                    feedback.style.color = 'red';
+                    feedback.textContent = data.message;
+                }
+            })
+            .catch(err => {
+                feedback.style.color = 'red';
+                feedback.textContent = 'Error marking attendance.';
+                console.error(err);
+            });
+        });
+    }
 });
 </script>
-
 @endsection
+
+

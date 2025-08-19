@@ -15,10 +15,9 @@ class AdminDashboardController extends Controller
     public function index(Request $request)
     {
         $activeTab = $request->input('tab', 'profile');
-
         $search = $request->search;
 
-        // Users
+        // Users (exclude logged-in admin)
         $users = User::with('department')
             ->where('id', '!=', auth()->id())
             ->when($search, fn($q) => $q->where('name', 'like', "%$search%")
@@ -35,26 +34,22 @@ class AdminDashboardController extends Controller
         // Attendance with filters
         $attendanceRecords = Attendance::with('user.department')
             ->when($request->filter_user, fn($q) => $q->where('user_id', $request->filter_user))
-            ->when($request->filter_department, function($q) use ($request) {
-                $q->whereHas('user', fn($sub) => $sub->where('department_id', $request->filter_department));
-            })
+            ->when($request->filter_department, fn($q) => $q->whereHas('user', fn($sub) => $sub->where('department_id', $request->filter_department)))
             ->when($request->filter_status && $request->filter_status != 'all', fn($q) => $q->where('status', $request->filter_status))
             ->get();
 
         // Audits
         $audits = Audit::with('user')->latest()->get();
 
-        return view('admin.dashboard', [
-            'users' => $users,
-            'departments' => $departments,
-            'totalUsers' => $totalUsers,
-            'totalDepartments' => $totalDepartments,
-            'attendanceRecords' => $attendanceRecords,
-            'usersForFilter' => User::all(),
-            'departmentsForFilter' => Department::all(),
-            'activeTab' => $activeTab,
-            'audits' => $audits,
-        ]);
+        // Users/Departments for filters
+        $usersForFilter = User::all();
+        $departmentsForFilter = Department::all();
+
+        return view('admin.dashboard', compact(
+            'users', 'departments', 'totalUsers', 'totalDepartments',
+            'attendanceRecords', 'usersForFilter', 'departmentsForFilter',
+            'activeTab', 'audits'
+        ));
     }
 
     // ---------------------- USERS CRUD ----------------------
@@ -75,10 +70,13 @@ class AdminDashboardController extends Controller
             'force_password_change' => true,
         ]);
 
+        // Assign default role if you want (Spatie)
+        $user->assignRole('User');
+
         // Log audit
         Audit::create([
             'user_id' => auth()->id(),
-            'role' => auth()->user()->role,
+            'role' => auth()->user()->getRoleNames()->implode(', '), // Spatie roles
             'action' => 'Create',
             'target' => 'User: ' . $user->name,
             'ip_address' => request()->ip(),
@@ -108,7 +106,7 @@ class AdminDashboardController extends Controller
         // Log audit
         Audit::create([
             'user_id' => auth()->id(),
-            'role' => auth()->user()->role,
+            'role' => auth()->user()->getRoleNames()->implode(', '),
             'action' => 'Update',
             'target' => 'User: ' . $user->name,
             'ip_address' => request()->ip(),
@@ -128,7 +126,7 @@ class AdminDashboardController extends Controller
         // Log audit
         Audit::create([
             'user_id' => auth()->id(),
-            'role' => auth()->user()->role,
+            'role' => auth()->user()->getRoleNames()->implode(', '),
             'action' => 'Delete',
             'target' => 'User: ' . $userName,
             'ip_address' => request()->ip(),
@@ -165,7 +163,7 @@ class AdminDashboardController extends Controller
         // Log audit
         Audit::create([
             'user_id' => auth()->id(),
-            'role' => auth()->user()->role,
+            'role' => auth()->user()->getRoleNames()->implode(', '),
             'action' => 'Delete',
             'target' => 'Filtered Attendance',
             'ip_address' => request()->ip(),

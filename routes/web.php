@@ -18,7 +18,6 @@ Route::get("/login", [UserController::class, 'loginPage'])->name('login');
 Route::post("/login", [UserController::class, 'login'])->name('user.login');
 
 // ------------------- FORCE PASSWORD CHANGE -------------------
-// Only authenticated users can see/change password
 Route::middleware(['auth'])->group(function () {
     Route::get('/force-change-password', [UserDashboardController::class, 'showForceChangePassword'])
         ->name('force.change.password');
@@ -27,12 +26,12 @@ Route::middleware(['auth'])->group(function () {
 });
 
 // ------------------- USER ROUTES -------------------
-Route::middleware(["auth", 'role:user', 'force.password'])->group(function(){
+Route::middleware(["auth", 'role:User', 'force.password'])->group(function(){
 
     // Dashboard
     Route::get("/dashboard", [UserDashboardController::class,"index"])->name("user.dashboard");
 
-    // Attendance records (AJAX)
+    // Attendance records
     Route::get('/attendance', [UserDashboardController::class, 'getAttendance'])->name('user.attendance');
 
     // Mark attendance (simulate scan)
@@ -40,24 +39,32 @@ Route::middleware(["auth", 'role:user', 'force.password'])->group(function(){
 });
 
 // ------------------- ADMIN ROUTES -------------------
-Route::middleware(["auth",'role:admin'])->group(function(){
+Route::middleware(['auth', 'role:Admin|Super Admin'])->group(function () {
 
     // Admin Dashboard
     Route::get("/admin-dashboard", [AdminDashboardController::class,"index"])->name("admin.dashboard");
 
-    // USERS CRUD
+    // ------------------- USERS -------------------
+    Route::get('/admin/users', [AdminDashboardController::class, 'usersIndex'])->name('admin.users.index'); // index page
     Route::post('/admin/users/store', [AdminDashboardController::class, 'storeUser'])->name('admin.users.store');
     Route::patch('/admin/users/update/{id}', [AdminDashboardController::class, 'updateUser'])->name('admin.users.update');
     Route::delete('/admin/users/delete/{id}', [AdminDashboardController::class, 'deleteUser'])->name('admin.users.destroy');
 
-    // ATTENDANCE DELETION
-    Route::delete('/admin/attendance/delete', [AdminDashboardController::class, 'deleteAttendance'])->name('admin.attendance.delete');
-    Route::post('/admin/attendance/delete-filtered', [AdminDashboardController::class, 'deleteFilteredAttendance'])->name('admin.attendance.deleteFiltered');
-
-    // DEPARTMENTS CRUD
+    // ------------------- DEPARTMENTS -------------------
+    Route::get('/admin/departments', [DepartmentController::class, 'index'])->name('admin.departments.index'); // index page
     Route::post('/admin/departments/store', [DepartmentController::class, 'store'])->name('admin.departments.store');
     Route::patch('/admin/departments/update/{id}', [DepartmentController::class, 'update'])->name('admin.departments.update');
     Route::delete('/admin/departments/delete/{id}', [DepartmentController::class, 'destroy'])->name('admin.departments.delete');
+
+    // ------------------- ATTENDANCE REPORTS -------------------
+    Route::get('/admin/attendance-reports', [AdminDashboardController::class, 'attendanceReports'])->name('admin.attendance.reports');
+
+    // ------------------- AUDITS -------------------
+    Route::get('/admin/audits', [AdminDashboardController::class, 'audits'])->name('admin.audits');
+
+    // ------------------- ATTENDANCE DELETION -------------------
+    Route::delete('/admin/attendance/delete', [AdminDashboardController::class, 'deleteAttendance'])->name('admin.attendance.delete');
+    Route::post('/admin/attendance/delete-filtered', [AdminDashboardController::class, 'deleteFilteredAttendance'])->name('admin.attendance.deleteFiltered');
 });
 
 // ------------------- LOGOUT -------------------

@@ -5,13 +5,12 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Attendance;
-use App\Models\Audit; // Audit model
+use App\Models\Audit;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Hash;
 
 class UserDashboardController extends Controller
 {
-    // Display the user dashboard
     public function index()
     {
         $user = Auth::user();
@@ -26,7 +25,6 @@ class UserDashboardController extends Controller
         ]);
     }
 
-    // Get attendance records (AJAX)
     public function getAttendance()
     {
         $user = Auth::user();
@@ -36,7 +34,6 @@ class UserDashboardController extends Controller
             ->orderBy('date', 'desc')
             ->get();
 
-        // Format response with user name and department
         $data = $attendance->map(function($item){
             return [
                 'id' => $item->id,
@@ -52,17 +49,15 @@ class UserDashboardController extends Controller
         return response()->json($data);
     }
 
-    // Mark attendance (AJAX)
     public function markAttendance(Request $request)
     {
         $user = Auth::user();
         $today = now()->toDateString();
 
-        $signInDeadline = Carbon::today()->setHour(8)->setMinute(0)->setSecond(0); // 08:00
-        $signOutTime   = Carbon::today()->setHour(14)->setMinute(0)->setSecond(0);  // 14:00
+        $signInDeadline = Carbon::today()->setHour(8)->setMinute(0)->setSecond(0);
+        $signOutTime   = Carbon::today()->setHour(14)->setMinute(0)->setSecond(0);
         $now = Carbon::now();
 
-        // Get or create today's attendance record
         $record = Attendance::firstOrCreate(
             ['user_id' => $user->id, 'date' => $today],
             ['status' => 'Absent']
@@ -71,7 +66,6 @@ class UserDashboardController extends Controller
         $actionPerformed = '';
         $description = '';
 
-        // First scan → Time In
         if (!$record->time_in) {
             $record->time_in = $now->format('H:i:s');
             $record->status = $now->gt($signInDeadline) ? 'Late' : 'Present';
@@ -80,7 +74,6 @@ class UserDashboardController extends Controller
             $actionPerformed = 'Time In';
             $description = "User marked time in at {$record->time_in}";
         }
-        // Second scan → Time Out
         elseif (!$record->time_out) {
             if ($now->lt($signOutTime)) {
                 return response()->json([
@@ -90,8 +83,6 @@ class UserDashboardController extends Controller
             }
 
             $record->time_out = $now->format('H:i:s');
-
-            // Correct status if needed
             if (!$record->time_in) {
                 $record->status = 'Absent';
             } elseif ($record->status != 'Late') {
@@ -110,11 +101,11 @@ class UserDashboardController extends Controller
             ]);
         }
 
-        // Log audit record
+        // Log audit with Spatie role
         if ($actionPerformed) {
             Audit::create([
                 'user_id'    => $user->id,
-                'role'       => $user->role,
+                'role' => $user->getRoleNames()->implode(', '),
                 'action'     => $actionPerformed,
                 'target'     => 'Attendance',
                 'ip_address' => $request->ip(),
@@ -122,7 +113,6 @@ class UserDashboardController extends Controller
             ]);
         }
 
-        // Return full info including user and department
         $record->load('user.department');
 
         return response()->json([
@@ -140,12 +130,11 @@ class UserDashboardController extends Controller
         ]);
     }
 
-     public function showForceChangePassword()
+    public function showForceChangePassword()
     {
         return view('auth.force-change-password');
     }
 
-    // Handle password update
     public function updateForceChangePassword(Request $request)
     {
         $request->validate([
@@ -154,7 +143,7 @@ class UserDashboardController extends Controller
 
         $user = Auth::user();
         $user->password = Hash::make($request->password);
-        $user->force_password_change = false; // disable force change after update
+        $user->force_password_change = false;
         $user->save();
 
         return redirect()->route('user.dashboard')->with('success', 'Password changed successfully!');

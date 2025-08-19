@@ -13,9 +13,11 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'role' => RoleMiddleware::class,
-            'force.password' => \App\Http\Middleware\ForcePasswordChange::class, 
-        ]);
+        'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+        'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+        'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+        'force.password' => \App\Http\Middleware\ForcePasswordChange::class,
+    ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

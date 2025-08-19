@@ -3,18 +3,22 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
-class UserController extends Controller
-{   
 
-    public function loginPage(){
+class UserController extends Controller
+{
+
+    public function loginPage()
+    {
         return view("login");
     }
-    public function registerPage(){
+    public function registerPage()
+    {
         return view("register");
     }
     public function register(Request $request)
@@ -37,17 +41,17 @@ class UserController extends Controller
             'email' => 'required|email',
             'password' => 'required',
         ]);
-        
-        if(Auth::attempt($credentials)){
+
+        if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
             $user = Auth::user();
-            if($user->role == 'admin'){
-                return redirect()->route('admin.dashboard');
-            }else{
-                return redirect()->route('user.dashboard');
+            if ($user->hasAnyRole(['Admin', 'Super Admin'])) {
+                return redirect('/admin-dashboard');
+            } else {
+                return redirect('/dashboard');
             }
             // session(['user_id' => $user->id, 'user_name' => $user->name]);
-        }else{
+        } else {
             return back()->with('error', 'Invalid credentials');
         }
     }
@@ -60,31 +64,31 @@ class UserController extends Controller
 
     // UserController.php
 
-public function store(Request $request)
-{
-    $request->validate([
-        'username' => 'required',
-        'email' => 'required|email|unique:users,email',
-        'password' => 'required',
-        'department_id' => 'required|exists:departments,id'
-    ]);
+    public function store(Request $request)
+    {
+        $request->validate([
+            'username' => 'required',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required',
+            'department_id' => 'required|exists:departments,id'
+        ]);
 
-    User::create([
-        'username' => $request->username,
-        'email' => $request->email,
-        'password' => bcrypt($request->password),
-        'department_id' => $request->department_id,
-    ]);
+        User::create([
+            'username' => $request->username,
+            'email' => $request->email,
+            'password' => bcrypt($request->password),
+            'department_id' => $request->department_id,
+        ]);
 
-    return redirect()->back()->with('success', 'User added successfully!');
-}
+        return redirect()->back()->with('success', 'User added successfully!');
+    }
 
-public function destroy($id)
-{
-    $user = User::findOrFail($id);
-    $user->delete();
-    return redirect()->back()->with('success', 'User deleted!');
-}
+    public function destroy($id)
+    {
+        $user = User::findOrFail($id);
+        $user->delete();
+        return redirect()->back()->with('success', 'User deleted!');
+    }
 
 
 
