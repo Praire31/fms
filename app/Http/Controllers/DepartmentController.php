@@ -44,6 +44,12 @@ class DepartmentController extends Controller
     // Delete department
     public function destroy($id)
     {
+         // Check if the logged-in user has delete permission
+    if (!auth()->user()->can('users.delete')) {
+        return redirect()->route('admin.dashboard', ['tab' => 'users'])
+                         ->with('error', '❌ Permission denied.');
+    }
+
         $department = Department::findOrFail($id);
         $department->delete();
 
@@ -52,3 +58,4 @@ class DepartmentController extends Controller
                          ->with('success', 'Department deleted successfully!');
     }
 }
+    

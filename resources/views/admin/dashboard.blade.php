@@ -163,6 +163,7 @@
                     {{-- Edit Department Form --}}
                     <form id="editDeptForm" method="POST" style="display:none;margin-bottom:20px;">
                         @csrf
+                        @method('PATCH')
                         <input type="hidden" name="id" id="editDeptId">
                         <input type="text" name="name" id="editDeptName" placeholder="Department Name" required
                             style="padding:8px;margin-right:5px;">

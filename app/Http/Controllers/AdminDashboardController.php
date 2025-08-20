@@ -119,6 +119,13 @@ class AdminDashboardController extends Controller
 
     public function deleteUser($id)
     {
+
+        // Check if the logged-in user has delete permission
+    if (!auth()->user()->can('users.delete')) {
+        return redirect()->route('admin.dashboard', ['tab' => 'users'])
+                         ->with('error', '❌ Permission denied.');
+    }
+
         $user = User::findOrFail($id);
         $userName = $user->name;
         $user->delete();
@@ -140,6 +147,12 @@ class AdminDashboardController extends Controller
     // ---------------------- ATTENDANCE ----------------------
     public function deleteFilteredAttendance(Request $request)
     {
+
+        if (!auth()->user()->hasRole('Super Admin')) {
+        return redirect()->back()
+            ->with('error', '❌Permission denied');
+    }
+
         $query = Attendance::query();
 
         if ($request->filter_user) {
@@ -172,4 +185,6 @@ class AdminDashboardController extends Controller
 
         return redirect()->back()->with('success', "$deletedCount attendance record(s) deleted successfully.");
     }
+
+    
 }

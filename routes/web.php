@@ -38,7 +38,8 @@ Route::middleware(["auth", 'role:User', 'force.password'])->group(function(){
     Route::post('/mark-attendance', [UserDashboardController::class, 'markAttendance'])->name('user.simulateAttendance');
 });
 
-     //{{--For Super Admin and Admin--}}
+
+// ------------------- ADMIN + SUPER ADMIN ROUTES -------------------
 Route::middleware(['auth', 'role:Admin|Super Admin'])->group(function () {
 
     // Admin Dashboard
@@ -48,33 +49,30 @@ Route::middleware(['auth', 'role:Admin|Super Admin'])->group(function () {
     Route::get('/admin/users', [AdminDashboardController::class, 'usersIndex'])->name('admin.users.index');
     Route::post('/admin/users/store', [AdminDashboardController::class, 'storeUser'])->name('admin.users.store');
     Route::patch('/admin/users/update/{id}', [AdminDashboardController::class, 'updateUser'])->name('admin.users.update');
-  
+
+    // 🔹 CHANGED: moved delete user route here
+    Route::delete('/admin/users/delete/{id}', [AdminDashboardController::class, 'deleteUser'])->name('admin.users.destroy');
 
     // ------------------- DEPARTMENTS -------------------
     Route::get('/admin/departments', [DepartmentController::class, 'index'])->name('admin.departments.index');
     Route::post('/admin/departments/store', [DepartmentController::class, 'store'])->name('admin.departments.store');
     Route::patch('/admin/departments/update/{id}', [DepartmentController::class, 'update'])->name('admin.departments.update');
-    
+
+    // 🔹 CHANGED: moved delete department route here
+    Route::delete('/admin/departments/delete/{id}', [DepartmentController::class, 'destroy'])->name('admin.departments.delete');
 
     // ------------------- ATTENDANCE REPORTS -------------------
     Route::get('/admin/attendance-reports', [AdminDashboardController::class, 'attendanceReports'])->name('admin.attendance.reports');
-    
+
+    // 🔹 CHANGED: moved delete attendance routes here
+    Route::delete('/admin/attendance/delete', [AdminDashboardController::class, 'deleteAttendance'])->name('admin.attendance.delete');
+    Route::post('/admin/attendance/delete-filtered', [AdminDashboardController::class, 'deleteFilteredAttendance'])->name('admin.attendance.deleteFiltered');
 });
 
 
-    //{{--For Super Admin Only--}}
+// ------------------- SUPER ADMIN ONLY ROUTES -------------------
+// 🔹 CHANGED: Now only audits remain restricted to Super Admin
 Route::middleware(['auth', 'role:Super Admin'])->group(function () {
-
-    // ------------------- USERS -------------------
-    Route::delete('/admin/users/delete/{id}', [AdminDashboardController::class, 'deleteUser'])->name('admin.users.destroy');
-
-    // ------------------- DEPARTMENTS -------------------
-    Route::delete('/admin/departments/delete/{id}', [DepartmentController::class, 'destroy'])->name('admin.departments.delete');
-
-    // ------------------- ATTENDANCE DELETION -------------------
-    Route::delete('/admin/attendance/delete', [AdminDashboardController::class, 'deleteAttendance'])->name('admin.attendance.delete');
-    Route::post('/admin/attendance/delete-filtered', [AdminDashboardController::class, 'deleteFilteredAttendance'])->name('admin.attendance.deleteFiltered');
-
     // ------------------- AUDITS -------------------
     Route::get('/admin/audits', [AdminDashboardController::class, 'audits'])->name('admin.audits');
 });
