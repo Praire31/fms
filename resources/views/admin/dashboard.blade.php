@@ -64,8 +64,8 @@
                             <input type="text" name="search" placeholder="Search users..." value="{{ request('search') }}"
                                 class="input-field" />
                             <button type="submit" class="btn search-btn">Search</button>
-                            <a href="{{ route('admin.dashboard', ['active_tab' => 'users']) }}"
-                                class="btn clear-btn">Clear</a>
+                            <a href="{{ route('admin.dashboard', ['tab' => 'users']) }}" class="btn btn-secondary">Clear</a>
+
                         </form>
                     </div>
 
@@ -208,7 +208,7 @@
                     <h2><i class="fas fa-calendar-check"></i> Attendance Reports</h2>
 
                     <div class="attendance-filters" style="margin-bottom:15px;">
-                        <form method="GET" action="{{ route('admin.dashboard') }}" class="flex gap-2 flex-wrap">
+                        <form method="GET" action="{{ route('admin.attendance.reports') }}" class="flex gap-2 flex-wrap">
                             <select name="filter_user" class="input-field">
                                 <option value="">All Users</option>
                                 @foreach($usersForFilter as $user)
@@ -236,7 +236,7 @@
                             </select>
 
                             <button type="submit" class="btn btn-primary">Apply Filters</button>
-                            <a href="{{ route('admin.dashboard') }}" class="btn btn-secondary">Clear Filters</a>
+                            <a href="{{ route('admin.attendance.reports') }}" class="btn btn-secondary">Clear Filters</a>
 
                             {{-- Delete Records by Filter --}}
                             <button type="submit" formaction="{{ route('admin.attendance.deleteFiltered') }}"

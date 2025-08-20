@@ -21,7 +21,7 @@ class AdminDashboardController extends Controller
         $users = User::with('department')
             ->where('id', '!=', auth()->id())
             ->when($search, fn($q) => $q->where('name', 'like', "%$search%")
-                                           ->orWhere('email', 'like', "%$search%"))
+                                        ->orWhere('email', 'like', "%$search%"))
             ->get();
 
         // Departments
@@ -70,13 +70,13 @@ class AdminDashboardController extends Controller
             'force_password_change' => true,
         ]);
 
-        // Assign default role if you want (Spatie)
+        // Assign default role
         $user->assignRole('User');
 
         // Log audit
         Audit::create([
             'user_id' => auth()->id(),
-            'role' => auth()->user()->getRoleNames()->implode(', '), // Spatie roles
+            'role' => auth()->user()->getRoleNames()->implode(', '),
             'action' => 'Create',
             'target' => 'User: ' . $user->name,
             'ip_address' => request()->ip(),
@@ -119,12 +119,10 @@ class AdminDashboardController extends Controller
 
     public function deleteUser($id)
     {
-
-        // Check if the logged-in user has delete permission
-    if (!auth()->user()->can('users.delete')) {
-        return redirect()->route('admin.dashboard', ['tab' => 'users'])
-                         ->with('error', '❌ Permission denied.');
-    }
+        if (!auth()->user()->can('users.delete')) {
+            return redirect()->route('admin.dashboard', ['tab' => 'users'])
+                             ->with('error', '❌ You do not have permission to delete users.');
+        }
 
         $user = User::findOrFail($id);
         $userName = $user->name;
@@ -144,47 +142,62 @@ class AdminDashboardController extends Controller
                          ->with('success', 'User deleted successfully!');
     }
 
-    // ---------------------- ATTENDANCE ----------------------
-    public function deleteFilteredAttendance(Request $request)
+    // ---------------------- ATTENDANCE REPORTS ----------------------
+    public function attendanceReports(Request $request)
+{
+    $activeTab = $request->input('tab', 'reports'); // default to 'reports' tab
+    $filterUser = $request->filter_user;
+    $filterDepartment = $request->filter_department;
+    $startDate = $request->start_date;
+    $endDate = $request->end_date;
+    $status = $request->filter_status;
+
+    $users = User::with('department')->get();
+    $departments = Department::all();
+    $totalUsers = User::count();
+    $totalDepartments = Department::count();
+    $audits = Audit::with('user')->latest()->get();
+
+    $query = Attendance::with(['user', 'user.department']);
+
+    if ($filterUser) {
+        $query->where('user_id', $filterUser);
+    }
+
+    if ($filterDepartment) {
+        $query->whereHas('user.department', function ($q) use ($filterDepartment) {
+            $q->where('id', $filterDepartment);
+        });
+    }
+
+    if ($startDate) {
+        $query->whereDate('date', '>=', $startDate);
+    }
+
+    if ($endDate) {
+        $query->whereDate('date', '<=', $endDate);
+    }
+
+    if ($status && $status !== 'all') {
+        $query->where('status', $status);
+    }
+
+    $attendanceRecords = $query->orderBy('date', 'desc')->get();
+
+    $usersForFilter = User::all();
+    $departmentsForFilter = Department::all();
+
+    return view('admin.dashboard', compact(
+        'users', 'departments', 'totalUsers', 'totalDepartments',
+        'attendanceRecords', 'usersForFilter', 'departmentsForFilter',
+        'activeTab', 'audits'
+    ));
+}
+
+
+    public function clearAttendanceFilters()
     {
-
-        if (!auth()->user()->hasRole('Super Admin')) {
-        return redirect()->back()
-            ->with('error', '❌Permission denied');
+        return redirect()->route('admin.attendance.reports')
+                         ->with('success', '✅ Filters cleared successfully.');
     }
-
-        $query = Attendance::query();
-
-        if ($request->filter_user) {
-            $query->where('user_id', $request->filter_user);
-        }
-        if ($request->filter_department) {
-            $query->whereHas('user', fn($q) => $q->where('department_id', $request->filter_department));
-        }
-        if ($request->start_date) {
-            $query->where('date', '>=', $request->start_date);
-        }
-        if ($request->end_date) {
-            $query->where('date', '<=', $request->end_date);
-        }
-        if ($request->filter_status && $request->filter_status != 'all') {
-            $query->where('status', $request->filter_status);
-        }
-
-        $deletedCount = $query->delete();
-
-        // Log audit
-        Audit::create([
-            'user_id' => auth()->id(),
-            'role' => auth()->user()->getRoleNames()->implode(', '),
-            'action' => 'Delete',
-            'target' => 'Filtered Attendance',
-            'ip_address' => request()->ip(),
-            'description' => "$deletedCount attendance record(s) deleted"
-        ]);
-
-        return redirect()->back()->with('success', "$deletedCount attendance record(s) deleted successfully.");
-    }
-
-    
 }
