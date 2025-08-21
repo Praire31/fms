@@ -194,7 +194,8 @@ td.btn{
 }
 
 /* Attendance Reports Filters */
-.attendance-filters {
+.attendance-filters 
+.audit-filters{
     display: flex;           
     flex-wrap: wrap;         
     gap: 10px; 
@@ -205,6 +206,8 @@ td.btn{
 }
 
 .attendance-filters select,
+.audit-filters select,
+.audit-filters .input-field,
 .attendance-filters input[type="date"] {
     padding: 6px 10px;     
     border-radius: 4px;
@@ -212,9 +215,16 @@ td.btn{
     min-width: 120px;      
   }
 
+.audit-filters .btn,
 .attendance-filters .btn {
     padding: 6px 12px;       
 }
+
+.inline-block {
+    display: inline-block;
+    margin-left: 8px; /* optional spacing */
+}
+
 
 
 .table-auto {
@@ -238,4 +248,10 @@ td.btn{
 .table-auto tr:nth-child(even) {
     background-color: #f2f2f2;
   }
+
+  .input-field {
+  min-width: 120px;
+  max-width: 180px;
+}
+
 

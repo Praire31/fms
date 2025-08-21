@@ -63,18 +63,18 @@ Route::middleware(['auth', 'role:Admin|Super Admin'])->group(function () {
 
     // ------------------- ATTENDANCE REPORTS -------------------
     Route::get('/admin/attendance-reports', [AdminDashboardController::class, 'attendanceReports'])->name('admin.attendance.reports');
-
-    // 🔹 CHANGED: moved delete attendance routes here
-    Route::delete('/admin/attendance/delete', [AdminDashboardController::class, 'deleteAttendance'])->name('admin.attendance.delete');
-    Route::post('/admin/attendance/delete-filtered', [AdminDashboardController::class, 'deleteFilteredAttendance'])->name('admin.attendance.deleteFiltered');
+    Route::delete('/admin/attendance/delete', [AdminDashboardController::class, 'deleteFilteredAttendance'])->name('admin.attendance.delete');
+    Route::post('/admin/attendance/delete-filtered', [AdminDashboardController::class, 'deleteFilteredAttendance']) ->name('admin.attendance.deleteFiltered');
 });
-
+    
 
 // ------------------- SUPER ADMIN ONLY ROUTES -------------------
 // 🔹 CHANGED: Now only audits remain restricted to Super Admin
 Route::middleware(['auth', 'role:Super Admin'])->group(function () {
     // ------------------- AUDITS -------------------
     Route::get('/admin/audits', [AdminDashboardController::class, 'audits'])->name('admin.audits');
+    Route::delete('/admin/audits/delete/{id}', [AdminDashboardController::class, 'deleteAudit'])->name('admin.audits.delete');
+    Route::post('/admin/audits/delete-filtered', [AdminDashboardController::class, 'deleteFilteredAudits'])->name('admin.audits.deleteFiltered');
 });
 
 

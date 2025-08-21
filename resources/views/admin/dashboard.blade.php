@@ -4,6 +4,7 @@
 @section('title', 'Admin Dashboard')
 
 @section('admin-content')
+
     <div class="dashboard-container">
         {{-- Sidebar --}}
         <div class="sidebar">
@@ -15,19 +16,19 @@
             <label for="manage-toggle"><i class="fas fa-cogs"></i> Manage ▼</label>
             <div class="dropdown-content">
                 @can('users.manage')
-                <a href="#" class="tab-link" data-target="users"><i class="fas fa-users"></i> Users</a>
+                    <a href="#" class="tab-link" data-target="users"><i class="fas fa-users"></i> Users</a>
                 @endcan
 
                 @can('departments.manage')
-                <a href="#" class="tab-link" data-target="departments"><i class="fas fa-building"></i> Departments</a>
+                    <a href="#" class="tab-link" data-target="departments"><i class="fas fa-building"></i> Departments</a>
                 @endcan
             </div>
-             @can('attendance.view')   
-            <a href="#" class="tab-link" data-target="reports"><i class="fas fa-calendar-check"></i> Attendance Reports</a>
+            @can('attendance.view')
+                <a href="#" class="tab-link" data-target="reports"><i class="fas fa-calendar-check"></i> Attendance Reports</a>
             @endcan
 
             @can('audits.view')
-            <a href="#" class="tab-link" data-target="audits"><i class="fas fa-file-alt"></i> Audits</a>
+                <a href="#" class="tab-link" data-target="audits"><i class="fas fa-file-alt"></i> Audits</a>
             @endcan
             <a href="{{ route('logout') }}" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
@@ -85,7 +86,7 @@
                             @endforeach
                         </select>
                         <button type="submit" class="btn btn-primary">Add User</button>
-                        <button type="button" class="btn btn-secondary" onclick="hideEditUserForm()">Cancel</button>
+                        <a href="{{ route('admin.dashboard', ['tab' => 'users']) }}" class="btn btn-secondary">Cancel</a>
                     </form>
 
                     {{-- Edit User Form --}}
@@ -156,7 +157,7 @@
                             <input type="text" name="name" placeholder="Department Name" required
                                 style="padding:8px;margin-right:5px;">
                             <button type="submit" class="btn btn-primary">Add Department</button>
-                            <button type="button" class="btn btn-secondary" onclick="hideEditDeptForm()">Cancel</button>
+                            <a href="{{ route('admin.dashboard', ['tab' => 'departments']) }}" class="btn btn-secondary">Cancel</a>
                         </form>
                     </div>
 
@@ -205,7 +206,7 @@
             {{-- Attendance Reports Section --}}
             <div id="reports" class="content-section">
                 <div class="card">
-                    <h2><i class="fas fa-calendar-check"></i> Attendance Reports</h2>
+                    <h2 style="margin-bottom:15px;"><i class="fas fa-reports"></i> Attendance Reports</h2>
 
                     <div class="attendance-filters" style="margin-bottom:15px;">
                         <form method="GET" action="{{ route('admin.attendance.reports') }}" class="flex gap-2 flex-wrap">
@@ -213,7 +214,8 @@
                                 <option value="">All Users</option>
                                 @foreach($usersForFilter as $user)
                                     <option value="{{ $user->id }}" {{ request('filter_user') == $user->id ? 'selected' : '' }}>
-                                        {{ $user->name }}</option>
+                                        {{ $user->name }}
+                                    </option>
                                 @endforeach
                             </select>
 
@@ -228,23 +230,35 @@
                             <input type="date" name="end_date" value="{{ request('end_date') }}" />
 
                             <select name="filter_status" class="input-field">
-                                <option value="all" {{ request('filter_status') == 'all' ? 'selected' : '' }}>All Status</option>
-                                <option value="Present" {{ request('filter_status') == 'Present' ? 'selected' : '' }}>Present</option>
-                                <option value="Absent" {{ request('filter_status') == 'Absent' ? 'selected' : '' }}>Absent</option>
+                                <option value="all" {{ request('filter_status') == 'all' ? 'selected' : '' }}>All Status
+                                </option>
+                                <option value="Present" {{ request('filter_status') == 'Present' ? 'selected' : '' }}>Present
+                                </option>
+                                <option value="Absent" {{ request('filter_status') == 'Absent' ? 'selected' : '' }}>Absent
+                                </option>
                                 <option value="Late" {{ request('filter_status') == 'Late' ? 'selected' : '' }}>Late</option>
-                                <option value="On Leave" {{ request('filter_status') == 'On Leave' ? 'selected' : '' }}>On Leave</option>
+                                <option value="On Leave" {{ request('filter_status') == 'On Leave' ? 'selected' : '' }}>On
+                                    Leave</option>
                             </select>
 
                             <button type="submit" class="btn btn-primary">Apply Filters</button>
                             <a href="{{ route('admin.attendance.reports') }}" class="btn btn-secondary">Clear Filters</a>
 
-                            {{-- Delete Records by Filter --}}
-                            <button type="submit" formaction="{{ route('admin.attendance.deleteFiltered') }}"
-                                formmethod="POST" class="btn btn-danger"
-                                onclick="return confirm('Delete filtered records?')">
-                                @csrf
-                                Delete Records
-                            </button>
+                            {{-- Delete Records --}}
+                            @if(auth()->user()->hasRole('Super Admin'))
+                                <button type="submit" formaction="{{ route('admin.attendance.deleteFiltered') }}"
+                                    formmethod="POST" class="btn btn-danger"
+                                    onclick="return confirm('Are you sure you want to delete these filtered attendance records?')">
+                                    @csrf
+                                    Delete Records
+                                </button>
+                            @else
+                                {{-- Admin sees alert instead of submitting --}}
+                                <button type="button" class="btn btn-danger"
+                                    onclick="alert('❌ Permission denied')">
+                                    Delete Records
+                                </button>
+                            @endif
                         </form>
                     </div>
 
@@ -291,9 +305,61 @@
 
             {{-- AUDIT LOGS SECTION --}}
             <div id="audits" class="content-section">
-                <h2>Audit Logs</h2>
+                <h2 style="margin-bottom:15px;"><i class="fas fa-audits"></i>Audit Logs</h2>
 
-                <table border="1" cellpadding="8" cellspacing="0" style="width:100%; border-collapse: collapse;">
+                {{-- Audits Filters and Delete Section --}} <div class="audits-filters mb-4">
+
+                    <!-- Apply Filters Form -->
+                    <form method="GET" action="{{ route('admin.audits') }}" class="flex gap-2 flex-wrap mb-6">
+                        <select name="filter_user" class="input-field">
+                            <option value="">All Users</option>
+                            @foreach($usersForFilter as $user)
+                                <option value="{{ $user->id }}" {{ request('filter_user') == $user->id ? 'selected' : '' }}>
+                                    {{ $user->name }}
+                                </option>
+                            @endforeach
+                        </select>
+
+                        <select name="filter_role" class="input-field">
+                            <option value="">All Roles</option>
+                            @foreach($rolesForFilter as $role)
+                                <option value="{{ $role }}" {{ request('filter_role') == $role ? 'selected' : '' }}>
+                                    {{ $role }}
+                                </option>
+                            @endforeach
+                        </select>
+
+                        <select name="filter_action" class="input-field">
+                            <option value="">All Actions</option>
+                            @foreach($actionsForFilter as $action)
+                                <option value="{{ $action }}" {{ request('filter_action') == $action ? 'selected' : '' }}>
+                                    {{ $action }}
+                                </option>
+                            @endforeach
+                        </select>
+
+                        <input type="date" name="start_date" value="{{ request('start_date') }}">
+                        <input type="date" name="end_date" value="{{ request('end_date') }}">
+
+                        <button type="submit" class="btn btn-primary">Apply Filters</button>
+
+                        <!-- Clear Filters keeps the tab active -->
+                        <a href="{{ route('admin.audits') }}" class="btn btn-secondary">Clear Filters</a>
+
+                        {{-- Delete Records by Filter --}}
+                        <button type="submit" formaction="{{ route('admin.audits.deleteFiltered') }}" formmethod="POST"
+                            class="btn btn-danger" onclick="return confirm('Delete filtered records?')">
+                            @csrf
+                            Delete Records
+                        </button>
+                    </form>
+
+                </div>
+
+
+
+
+                <table class="table-auto">
                     <thead style="background: #004466; color: white;">
                         <tr>
                             <th>User</th>
@@ -306,6 +372,7 @@
                     </thead>
                     <tbody>
                         @forelse ($audits as $audit)
+                         @if($audit->user) <!-- just make sure the user exists -->
                             <tr>
                                 <td>{{ $audit->user->name ?? 'System' }}</td>
                                 <td>{{ $audit->role ?? '-' }}</td>
@@ -314,10 +381,12 @@
                                 <td>{{ $audit->ip_address ?? '-' }}</td>
                                 <td>{{ $audit->created_at->format('Y-m-d H:i:s') }}</td>
                             </tr>
+                            @endif 
                         @empty
                             <tr>
                                 <td colspan="6" style="text-align:center;">No audit records found</td>
                             </tr>
+                            
                         @endforelse
                     </tbody>
                 </table>
