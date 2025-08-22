@@ -18,26 +18,21 @@ class AdminDashboardController extends Controller
         $activeTab = $request->input('tab', 'profile');
         $search = $request->search;
 
-        // Users based on role
-        $users = User::with('department')
-            ->where('id', '!=', auth()->id()) // always exclude myself
-            ->when(auth()->user()->hasRole('Super Admin'), function ($q) {
-                // Super Admin sees Admins + Users (but not Super Admins)
-                $q->whereHas('roles', fn($r) => $r->whereIn('name', ['Admin', 'User']));
-            })
-            ->when(auth()->user()->hasRole('Admin'), function ($q) {
-                // Admin sees only Users
-                $q->whereHas('roles', fn($r) => $r->where('name', 'User'));
-            })
-            ->when(
-                $search,
-                fn($q) =>
-                $q->where(function ($sub) use ($search) {
-                    $sub->where('name', 'like', "%$search%")
-                        ->orWhere('email', 'like', "%$search%");
-                })
-            )
-            ->get();
+      $users = User::with('department', 'roles')
+    ->where('id', '!=', auth()->id()) // hide logged-in user
+    ->whereHas('roles', function ($q) {
+        $q->whereIn('name', ['Admin', 'User']); // only fetch Admins and Users
+    })
+    ->when($search, function ($q) use ($search) {
+        $q->where(function ($sub) use ($search) {
+            $sub->where('name', 'like', "%$search%")
+                ->orWhere('email', 'like', "%$search%");
+        });
+    })
+    ->get();
+
+
+
 
 
         // Departments
@@ -55,22 +50,22 @@ class AdminDashboardController extends Controller
             ->get();
 
         // Audits
-$auditsQuery = Audit::with('user');
+        $auditsQuery = Audit::with('user');
 
-if (auth()->user()->hasRole('Super Admin')) {
-    // Super Admin sees Admin + User audits, but not their own
-    $auditsQuery
-        ->where('user_id', '!=', auth()->id())
-        ->whereHas('user.roles', fn($r) => $r->whereIn('name', ['Admin', 'User']));
-} elseif (auth()->user()->hasRole('Admin')) {
-    // Admin sees only User audits
-    $auditsQuery->whereHas('user.roles', fn($r) => $r->where('name', 'User'));
-} else {
-    // Users see nothing
-    $auditsQuery->whereRaw('0=1');
-}
+        if (auth()->user()->hasRole('Super Admin')) {
+            // Super Admin sees Admin + User audits, but not their own
+            $auditsQuery
+                ->where('user_id', '!=', auth()->id())
+                ->whereHas('user.roles', fn($r) => $r->whereIn('name', ['Admin', 'User']));
+        } elseif (auth()->user()->hasRole('Admin')) {
+            // Admin sees only User audits
+            $auditsQuery->whereHas('user.roles', fn($r) => $r->where('name', 'User'));
+        } else {
+            // Users see nothing
+            $auditsQuery->whereRaw('0=1');
+        }
 
-$audits = $auditsQuery->latest()->get();
+        $audits = $auditsQuery->latest()->get();
 
 
         // Users/Departments for filters
@@ -99,9 +94,46 @@ $audits = $auditsQuery->latest()->get();
             'rolesForFilter',
             'departmentsForFilter',
             'activeTab',
-            'audits'
+            'audits',
+
         ));
     }
+
+    //---------------------- MANUAL ATTENDANCE ----------------------//
+    public function storeManualAttendance(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'date' => 'required|date',
+            'time_in' => 'nullable|date_format:H:i',
+            'time_out' => 'nullable|date_format:H:i',
+            'status' => 'required|string'
+        ]);
+
+        $attendance = Attendance::create([
+            'user_id' => $request->user_id,
+            'date' => $request->date,
+            'time_in' => $request->time_in,
+            'time_out' => $request->time_out,
+            'status' => $request->status,
+        ]);
+
+
+
+        // Log audit
+        Audit::create([
+            'user_id' => auth()->id(),
+            'role' => auth()->user()->getRoleNames()->implode(', '),
+            'action' => 'Create',
+            'target' => 'Manual Attendance for ' . $attendance->user->name,
+            'ip_address' => $request->ip(),
+            'description' => 'Added manual attendance'
+        ]);
+
+        return redirect()->route('admin.dashboard', ['tab' => 'manual_attendance'])
+            ->with('success', 'Manual attendance added successfully!');
+    }
+
 
     // ---------------------- DEPARTMENTS CRUD ----------------------
     public function deleteDepartment($id)

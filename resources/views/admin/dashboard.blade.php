@@ -30,6 +30,11 @@
             @can('audits.view')
                 <a href="#" class="tab-link" data-target="audits"><i class="fas fa-file-alt"></i> Audits</a>
             @endcan
+
+            <a href="#" class="tab-link" data-target="attendance-manual"><i class="fas fa-pencil-alt"></i> Manual
+                Attendance</a>
+
+
             <a href="{{ route('logout') }}" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
 
@@ -125,7 +130,8 @@
                                     <td>{{ $index + 1 }}</td>
                                     <td>{{ $user->name }}</td>
                                     <td>{{ $user->email }}</td>
-                                    <td>{{ $user->department->name ?? '-' }}</td>
+                                    <td>{{ $user->department->name ?? 'N/A' }}</td>
+                                    <td>{{ $user->getRoleNames()->implode(', ') ?: 'No Role' }}</td>
                                     <td>
                                         <a href="#" class="btn btn-warning btn-sm"
                                             onclick="showEditUserForm({{ $user->id }}, '{{ $user->name }}', '{{ $user->email }}', {{ $user->department_id ?? 'null' }})">Edit</a>
@@ -157,7 +163,8 @@
                             <input type="text" name="name" placeholder="Department Name" required
                                 style="padding:8px;margin-right:5px;">
                             <button type="submit" class="btn btn-primary">Add Department</button>
-                            <a href="{{ route('admin.dashboard', ['tab' => 'departments']) }}" class="btn btn-secondary">Cancel</a>
+                            <a href="{{ route('admin.dashboard', ['tab' => 'departments']) }}"
+                                class="btn btn-secondary">Cancel</a>
                         </form>
                     </div>
 
@@ -254,8 +261,7 @@
                                 </button>
                             @else
                                 {{-- Admin sees alert instead of submitting --}}
-                                <button type="button" class="btn btn-danger"
-                                    onclick="alert('❌ Permission denied')">
+                                <button type="button" class="btn btn-danger" onclick="alert('❌ Permission denied')">
                                     Delete Records
                                 </button>
                             @endif
@@ -372,25 +378,76 @@
                     </thead>
                     <tbody>
                         @forelse ($audits as $audit)
-                         @if($audit->user) <!-- just make sure the user exists -->
-                            <tr>
-                                <td>{{ $audit->user->name ?? 'System' }}</td>
-                                <td>{{ $audit->role ?? '-' }}</td>
-                                <td>{{ $audit->action }}</td>
-                                <td>{{ $audit->target ?? '-' }}</td>
-                                <td>{{ $audit->ip_address ?? '-' }}</td>
-                                <td>{{ $audit->created_at->format('Y-m-d H:i:s') }}</td>
-                            </tr>
-                            @endif 
+                            @if($audit->user) <!-- just make sure the user exists -->
+                                <tr>
+                                    <td>{{ $audit->user->name ?? 'System' }}</td>
+                                    <td>{{ $audit->role ?? '-' }}</td>
+                                    <td>{{ $audit->action }}</td>
+                                    <td>{{ $audit->target ?? '-' }}</td>
+                                    <td>{{ $audit->ip_address ?? '-' }}</td>
+                                    <td>{{ $audit->created_at->format('Y-m-d H:i:s') }}</td>
+                                </tr>
+                            @endif
                         @empty
                             <tr>
                                 <td colspan="6" style="text-align:center;">No audit records found</td>
                             </tr>
-                            
+
                         @endforelse
                     </tbody>
                 </table>
             </div>
+
+            <!-- Manual Attendance Section -->
+            <div id="attendance-manual" class="content-section">
+                <div class="card">
+                    <h2>Manual Attendance Input</h2>
+
+                    @if(session('success'))
+                        <div style="color:green; margin-bottom:10px;">
+                            {{ session('success') }}
+                        </div>
+                    @endif
+
+                    <!-- Manual Attendance Form -->
+                    <form action="{{ route('attendance.manual.store') }}" method="POST"
+                        style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">
+                        @csrf
+                        <label>User</label>
+                        <select name="user_id" required>
+                            <option value="" disabled selected>Select User</option>
+                            @foreach($users as $user)
+                                <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->department->name ?? '-' }})
+                                </option>
+                            @endforeach
+                        </select>
+
+                        <label>Date</label>
+                        <input type="date" name="date" required>
+
+                        <label>Time In</label>
+                        <input type="time" name="time_in">
+
+                        <label>Time Out</label>
+                        <input type="time" name="time_out">
+
+                        <label>Status</label>
+                        <select name="status" required>
+                            <option value="Present">Present</option>
+                            <option value="Absent">Absent</option>
+                            <option value="Late">Late</option>
+                            <option value="On Leave">On Leave</option>
+                        </select>
+
+                        <button type="submit"
+                            style="background:#0077aa;color:white;padding:8px 15px;border:none;border-radius:4px;">Save</button>
+                    </form>
+
+
+
+                </div>
+            </div>
+
 
 
         </div> {{-- main-content ends --}}
