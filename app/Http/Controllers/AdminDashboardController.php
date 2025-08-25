@@ -308,9 +308,9 @@ class AdminDashboardController extends Controller
 
         // -------------------- FILTERS --------------------
         $filterType = $request->input('filter_type');
-        $filterUser = $request->input('user_id');
-        $filterDepartment = $request->input('department_id');
-        $status = $request->input('status');
+        $filterUser = $request->input('filter_user');
+        $filterDepartment = $request->input('filter_department');
+        $status = $request->input('filter_status');
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
 
@@ -342,7 +342,7 @@ class AdminDashboardController extends Controller
                 ->when($filterUser, fn($q) => $q->where('user_id', $filterUser))
                 ->when($filterDepartment, fn($q) => $q->whereHas('user', fn($sub) =>
                     $sub->where('department_id', $filterDepartment)))
-                ->when($status, fn($q) => $q->where('status', $status))
+                ->when($status && $status != 'all', fn($q) => $q->where('status', $status))
                 ->when($startDate && $endDate, fn($q) =>
                     $q->whereBetween('date', [$startDate, $endDate]))
                 ->orderBy('date', 'desc')
