@@ -9,6 +9,7 @@ use App\Models\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
+use Carbon\Carbon;
 
 class AdminDashboardController extends Controller
 {
@@ -18,29 +19,53 @@ class AdminDashboardController extends Controller
         $activeTab = $request->input('tab', 'profile');
         $search = $request->search;
 
-      $users = User::with('department', 'roles')
-    ->where('id', '!=', auth()->id()) // hide logged-in user
-    ->whereHas('roles', function ($q) {
-        $q->whereIn('name', ['Admin', 'User']); // only fetch Admins and Users
-    })
-    ->when($search, function ($q) use ($search) {
-        $q->where(function ($sub) use ($search) {
-            $sub->where('name', 'like', "%$search%")
-                ->orWhere('email', 'like', "%$search%");
-        });
-    })
-    ->get();
-
-
-
-
+        $users = User::with('department', 'roles')
+            ->where('id', '!=', auth()->id()) // hide logged-in user
+            ->whereHas('roles', function ($q) {
+                $q->whereIn('name', ['Admin', 'User']); // only fetch Admins and Users
+            })
+            ->when($search, function ($q) use ($search) {
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('name', 'like', "%$search%")
+                        ->orWhere('email', 'like', "%$search%");
+                });
+            })
+            ->get();
 
         // Departments
         $departments = Department::withCount('users')->get();
 
         // Stats
-        $totalUsers = User::where('id', '!=', auth()->id())->count();
+        $totalUsers = User::where('id', '!=', auth()->id()) // exclude logged-in user
+            ->whereHas('roles', function ($q) {
+                $q->whereIn('name', ['Admin', 'User']); // only Admins + Users
+            })
+            ->count();
+
         $totalDepartments = Department::count();
+
+        // ---------------------- DASHBOARD WIDGETS ----------------------
+        $today = Carbon::today()->toDateString();
+
+        // 1️⃣ Today’s Attendance
+        $todayAttendance = Attendance::whereDate('date', $today)->count();
+
+        // 2️⃣ Late Users (after 9:00 AM)
+        $lateUsers = Attendance::whereDate('date', $today)
+            ->whereNotNull('time_in')
+            ->where('status', 'Late')
+            ->count();
+
+        // 3️⃣ Users not yet checked in
+        $checkedInUserIds = Attendance::whereDate('date', $today)->pluck('user_id');
+
+        $notCheckedIn = User::where('id', '!=', auth()->id()) // exclude logged-in user
+            ->whereHas('roles', function ($q) {
+                $q->whereIn('name', ['Admin', 'User']); // only Admins + Users
+            })
+            ->whereNotIn('id', $checkedInUserIds) // exclude users who have checked in
+            ->count();
+
 
         // Attendance with filters
         $attendanceRecords = Attendance::with('user.department')
@@ -69,7 +94,7 @@ class AdminDashboardController extends Controller
 
 
         // Users/Departments for filters
-        $usersForFilter = User::all();
+        $usersForFilter = User::where('id', '!=', auth()->id())->get();
         $departmentsForFilter = Department::all();
 
         // Only for Super Admin audits section
@@ -95,7 +120,9 @@ class AdminDashboardController extends Controller
             'departmentsForFilter',
             'activeTab',
             'audits',
-
+            'todayAttendance',
+            'lateUsers',
+            'notCheckedIn'
         ));
     }
 
@@ -258,68 +285,128 @@ class AdminDashboardController extends Controller
     public function attendanceReports(Request $request)
     {
         $activeTab = $request->input('tab', 'reports'); // default to 'reports' tab
-        $filterUser = $request->filter_user;
-        $filterDepartment = $request->filter_department;
-        $rolesForFilter = [];
-        $actionsForFilter = [];
-        $startDate = $request->start_date;
-        $endDate = $request->end_date;
-        $status = $request->filter_status;
+        $today = Carbon::today()->toDateString();
 
-        $users = User::with('department')->get();
-        $departments = Department::all();
+        // -------------------- DASHBOARD COUNTS --------------------
+        $todayAttendance = Attendance::whereDate('date', $today)->count();
         $totalUsers = User::count();
         $totalDepartments = Department::count();
-        $audits = Audit::with('user')->latest()->get();
 
-        $query = Attendance::with(['user', 'user.department']);
+        // Late users
+        $lateUsers = Attendance::whereDate('date', $today)
+            ->where('status', 'Late')
+            ->count();
+
+        // Users not checked in today (count)
+        $checkedInUserIds = Attendance::whereDate('date', $today)
+            ->pluck('user_id');
+
+        $notCheckedIn = User::where('id', '!=', auth()->id())
+            ->whereHas('roles', fn($q) => $q->whereIn('name', ['Admin', 'User']))
+            ->whereNotIn('id', $checkedInUserIds)
+            ->count();
+
+        // -------------------- FILTERS --------------------
+        $filterType = $request->input('filter_type');
+        $filterUser = $request->input('user_id');
+        $filterDepartment = $request->input('department_id');
+        $status = $request->input('status');
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+
+        // -------------------- QUERY --------------------
+        $attendanceRecords = collect();   // default empty
+        $notCheckedInUsers = collect();   // default empty
+
+        if ($filterType === 'not_checked_in') {
+            // Get users who haven't checked in today (list)
+            $notCheckedInUsers = User::where('id', '!=', auth()->id())
+                ->whereHas('roles', fn($q) => $q->whereIn('name', ['Admin', 'User']))
+                ->whereNotIn('id', $checkedInUserIds)
+                ->with('department')
+                ->get();
+
+        } elseif ($filterType === 'late') {
+            // Users who are late today
+            $attendanceRecords = Attendance::with('user.department')
+                ->whereDate('date', $today)
+                ->where('status', 'Late')
+                ->whereNotNull('time_in')
+                ->whereTime('time_in', '>', '08:00:00')
+                ->orderBy('date', 'desc')
+                ->get();
+
+        } else {
+            // All attendance with filters
+            $attendanceRecords = Attendance::with('user.department')
+                ->when($filterUser, fn($q) => $q->where('user_id', $filterUser))
+                ->when($filterDepartment, fn($q) => $q->whereHas('user', fn($sub) =>
+                    $sub->where('department_id', $filterDepartment)))
+                ->when($status, fn($q) => $q->where('status', $status))
+                ->when($startDate && $endDate, fn($q) =>
+                    $q->whereBetween('date', [$startDate, $endDate]))
+                ->orderBy('date', 'desc')
+                ->get();
+        }
+
+        $rolesForFilter = [];
+        if (auth()->user()->hasRole('Super Admin')) {
+            $rolesForFilter = \Spatie\Permission\Models\Role::pluck('name');
+        }
+
+        $actionsForFilter = [];
+        if (auth()->user()->hasRole('Super Admin')) {
+            $actionsForFilter = Audit::distinct()->pluck('action');
+        }
+
+        $audits = collect(); // default empty
 
         if (auth()->user()->hasRole('Super Admin')) {
-            $rolesForFilter = \Spatie\Permission\Models\Role::pluck('name')->toArray();
-            $actionsForFilter = \App\Models\Audit::select('action')->distinct()->pluck('action')->toArray();
+            $audits = Audit::with('user')
+                ->whereHas('user.roles', fn($q) => $q->whereIn('name', ['Admin', 'User']))
+                ->where('user_id', '!=', auth()->id()) // exclude self
+                ->latest()
+                ->get();
+        } elseif (auth()->user()->hasRole('Admin')) {
+            $audits = Audit::with('user')
+                ->whereHas('user.roles', fn($q) => $q->where('name', 'User'))
+                ->latest()
+                ->get();
         }
-
-        if ($filterUser) {
-            $query->where('user_id', $filterUser);
-        }
-
-        if ($filterDepartment) {
-            $query->whereHas('user.department', function ($q) use ($filterDepartment) {
-                $q->where('id', $filterDepartment);
-            });
-        }
-
-        if ($startDate) {
-            $query->whereDate('date', '>=', $startDate);
-        }
-
-        if ($endDate) {
-            $query->whereDate('date', '<=', $endDate);
-        }
-
-        if ($status && $status !== 'all') {
-            $query->where('status', $status);
-        }
-
-        $attendanceRecords = $query->orderBy('date', 'desc')->get();
-
-        $usersForFilter = User::all();
+        
+        $users = User::all();
+        $departments = Department::all();
+        $usersForFilter = User::where('id', '!=', auth()->id())->get();
         $departmentsForFilter = Department::all();
 
         return view('admin.dashboard', compact(
+            'activeTab',
+            'attendanceRecords',
+            'notCheckedInUsers',   // ✅ list
             'users',
             'departments',
-            'totalUsers',
+            'todayAttendance',
             'totalDepartments',
-            'rolesForFilter',
-            'actionsForFilter',
-            'attendanceRecords',
+            'totalUsers',
+            'lateUsers',
+            'notCheckedIn',        // ✅ count
+            'filterType',
+            'filterUser',
+            'filterDepartment',
+            'status',
+            'startDate',
+            'endDate',
             'usersForFilter',
             'departmentsForFilter',
-            'activeTab',
+            'rolesForFilter',
+            'actionsForFilter',
             'audits'
         ));
     }
+
+
+
+
 
 
     public function clearAttendanceFilters()
@@ -332,7 +419,26 @@ class AdminDashboardController extends Controller
     public function audits(Request $request)
     {
         $activeTab = 'audits';
-        $usersForFilter = User::all();
+
+        $today = Carbon::today()->toDateString();
+        $todayAttendance = Attendance::whereDate('date', $today)->count();
+        $lateUsers = Attendance::whereDate('date', $today)
+            ->whereTime('time_in', '>', '08:00:00')
+            ->count();
+
+        $checkedInUserIds = Attendance::whereDate('date', $today)
+            ->whereNotNull('time_in')
+            ->pluck('user_id');
+
+        $notCheckedIn = User::where('id', '!=', auth()->id()) // exclude logged-in user
+            ->whereHas('roles', function ($q) {
+                $q->whereIn('name', ['Admin', 'User']); // only Admins + Users
+            })
+            ->whereNotIn('id', $checkedInUserIds) // exclude users who have checked in
+            ->count();
+
+
+        $usersForFilter = User::where('id', '!=', auth()->id())->get();
         $departmentsForFilter = Department::all();
         $rolesForFilter = Role::all();
         $actionsForFilter = Audit::select('action')->distinct()->pluck('action');
@@ -348,9 +454,12 @@ class AdminDashboardController extends Controller
             ->latest()
             ->get();
 
-        $users = User::with('department')->get();
+        $users = User::with('department')->where('id', '!=', auth()->id())->get(); // exclude self
         $departments = Department::all();
-        $totalUsers = User::count();
+        $totalUsers = User::where('id', '!=', auth()->id())
+            ->whereHas('roles', fn($q) => $q->whereIn('name', ['Admin', 'User']))
+            ->count();
+
         $totalDepartments = Department::count();
         $attendanceRecords = Attendance::with('user.department')->get();
         $departmentsForFilter = $departments;
@@ -366,7 +475,10 @@ class AdminDashboardController extends Controller
             'rolesForFilter',
             'actionsForFilter',
             'departmentsForFilter',
-            'audits'
+            'audits',
+            'todayAttendance',
+            'lateUsers',
+            'notCheckedIn'
         ));
     }
 

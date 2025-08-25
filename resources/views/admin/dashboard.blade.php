@@ -55,6 +55,41 @@
                         <div class="number">{{ $totalUsers }}</div>
                     </div>
                 </div>
+                <div class="dashboard-cards" style="margin-top:20px; display:flex; gap:20px; flex-wrap:wrap;">
+
+                    <!-- Today’s Attendance -->
+                    <div class="card"
+                        style="flex:1; min-width:150px; background-color:#4CAF50; color:white; text-align:center; padding:15px; border-radius:10px;">
+                        <h4>Today’s Attendance</h4>
+                        <p style="font-size:24px;">{{ $todayAttendance }} / {{ $totalUsers }}</p>
+                        <span style="font-size:30px;">📅</span>
+                    </div>
+
+                    <!-- Late Users -->
+                    <a href="{{ route('admin.attendance.reports', [
+        'tab' => 'reports',
+        'filter_type' => 'late'
+    ]) }}" style="flex:1; min-width:150px; background-color:#FF9800; color:white; text-align:center; padding:15px; border-radius:10px; text-decoration:none;">
+                        <h4>Late Users</h4>
+                        <p style="font-size:24px;">{{ $lateUsers }}</p>
+                        <span style="font-size:30px;">⏰</span>
+                    </a>
+
+                    <!-- Not Yet Checked In  -->
+                    <a href="{{ route('admin.attendance.reports', [
+        'tab' => 'reports',
+        'filter_type' => 'not_checked_in'
+    ]) }}" class="card"
+                        style="flex:1; min-width:150px; background-color:#F44336; color:white; text-align:center; padding:15px; border-radius:10px; text-decoration:none;">
+                        <h4>Not Checked In</h4>
+                        <p style="font-size:24px;">{{ $notCheckedIn }}</p>
+                        <span style="font-size:30px;">👤</span>
+                    </a>
+
+                </div>
+
+
+
             </div>
 
             {{-- Users Section --}}
@@ -268,6 +303,7 @@
                         </form>
                     </div>
 
+                    @php $counter = 1; @endphp
                     <table class="table-auto">
                         <thead class="bg-blue-700 text-white">
                             <tr>
@@ -282,9 +318,9 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($attendanceRecords as $index => $row)
-                                <tr class="{{ $index % 2 == 0 ? 'bg-gray-100' : 'bg-white' }}">
-                                    <td>{{ $index + 1 }}</td>
+                            @forelse($attendanceRecords as $row)
+                                <tr class="{{ $counter % 2 == 0 ? 'bg-gray-100' : 'bg-white' }}">
+                                    <td>{{ $counter++ }}</td>
                                     <td>{{ $row->user->name ?? '-' }}</td>
                                     <td>{{ $row->user->department->name ?? '-' }}</td>
                                     <td>{{ $row->date }}</td>
@@ -294,16 +330,31 @@
                                         @if($row->time_in && $row->time_out)
                                             {{ \Carbon\Carbon::parse($row->time_in)->diff(\Carbon\Carbon::parse($row->time_out))->format('%h h %i m') }}
                                         @else
-                                            -
+
                                         @endif
                                     </td>
                                     <td>{{ $row->status }}</td>
                                 </tr>
                             @empty
-                                <tr>
-                                    <td colspan="8" class="text-center">No attendance records found.</td>
-                                </tr>
+
                             @endforelse
+
+                            {{-- Add Not Checked In Users --}}
+                            @if(isset($filterType) && $filterType === 'not_checked_in' && isset($notCheckedInUsers) && $notCheckedInUsers->count() > 0)
+                                @foreach($notCheckedInUsers as $user)
+                                    <tr class="{{ $counter % 2 == 0 ? 'bg-gray-100' : 'bg-white' }}">
+                                        <td>{{ $counter++ }}</td>
+                                        <td>{{ $user->name }}</td>
+                                        <td>{{ $user->department->name ?? '-' }}</td>
+                                        <td>{{ \Carbon\Carbon::today()->toDateString() }}</td>
+                                        <td>-</td>
+                                        <td>-</td>
+                                        <td>-</td>
+                                        <td>Not Checked In</td>
+                                    </tr>
+                                @endforeach
+                            @endif
+
                         </tbody>
                     </table>
                 </div>
@@ -432,7 +483,7 @@
                         <input type="time" name="time_out">
 
                         <label>Status</label>
-                        <select name="status" required>
+                        <select name="status" class="form-control" required>
                             <option value="Present">Present</option>
                             <option value="Absent">Absent</option>
                             <option value="Late">Late</option>
