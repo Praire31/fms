@@ -83,5 +83,6 @@ class AdminAttendanceController extends Controller
             'lateUsers',
             'notCheckedIn'
         ));
+        
     }
 }
