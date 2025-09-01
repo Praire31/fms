@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Department;
 use App\Models\Audit;
 
+
 class DepartmentController extends Controller
 {
     // Add new department
