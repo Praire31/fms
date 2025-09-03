@@ -6,6 +6,7 @@ use App\Http\Controllers\UserDashboardController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\AdminAttendanceController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AttendanceController;
 
 // ------------------- PUBLIC ROUTES -------------------
 Route::get('/', function() {
@@ -80,3 +81,5 @@ Route::get('/logout', function () {
     session()->flush();
     return redirect('/login');
 })->name('logout');
+
+Route::get('/fingerprint/attendance', [AttendanceController::class, 'mark']);
