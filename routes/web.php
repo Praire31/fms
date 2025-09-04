@@ -82,4 +82,5 @@ Route::get('/logout', function () {
     return redirect('/login');
 })->name('logout');
 
+
 Route::get('/fingerprint/attendance', [AttendanceController::class, 'mark']);

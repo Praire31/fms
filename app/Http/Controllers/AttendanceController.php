@@ -17,6 +17,7 @@ class AttendanceController extends Controller
         if (!$fingerprintId) {
             return response()->json(['error' => 'No fingerprint ID provided'], 400);
         }
+        
 
         // Find user by fingerprint_id
         $user = User::where('fingerprint_id', $fingerprintId)->first();
