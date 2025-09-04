@@ -5,64 +5,147 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Attendance;
-
+use App\Models\Audit;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Hash;
 
 class UserDashboardController extends Controller
 {
     public function index()
     {
-        return view("user.dashboard");
+        $user = Auth::user();
+
+        $attendances = Attendance::with('user.department')
+            ->where('user_id', $user->id)
+            ->orderBy('date', 'desc')
+            ->get();
+
+        return view("user.dashboard", [
+            'attendances' => $attendances
+        ]);
     }
 
     public function getAttendance()
     {
-        $attendance = Attendance::where('user_id', Auth::id())->get(['date', 'time_in', 'time_out', 'status']);
-        return response()->json($attendance);
+        $user = Auth::user();
+
+        $attendance = Attendance::with('user.department')
+            ->where('user_id', $user->id)
+            ->orderBy('date', 'desc')
+            ->get();
+
+        $data = $attendance->map(function($item){
+            return [
+                'id' => $item->id,
+                'date' => $item->date,
+                'time_in' => $item->time_in,
+                'time_out' => $item->time_out,
+                'status' => $item->status,
+                'user_name' => $item->user->name ?? '-',
+                'department' => $item->user->department->name ?? '-',
+            ];
+        });
+
+        return response()->json($data);
     }
 
     public function markAttendance(Request $request)
     {
         $user = Auth::user();
-
-        // Simplified logic
         $today = now()->toDateString();
+
+        $signInDeadline = Carbon::today()->setHour(8)->setMinute(0)->setSecond(0);
+        $signOutTime   = Carbon::today()->setHour(14)->setMinute(0)->setSecond(0);
+        $now = Carbon::now();
+
         $record = Attendance::firstOrCreate(
             ['user_id' => $user->id, 'date' => $today],
-            ['time_in' => now()->format('H:i:s'), 'status' => 'Present']
+            ['status' => 'Absent']
         );
 
-        if ($record->wasRecentlyCreated === false) {
-            $record->time_out = now()->format('H:i:s');
+        $actionPerformed = '';
+        $description = '';
+
+        if (!$record->time_in) {
+            $record->time_in = $now->format('H:i:s');
+            $record->status = $now->gt($signInDeadline) ? 'Late' : 'Present';
             $record->save();
+
+            $actionPerformed = 'Time In';
+            $description = "User marked time in at {$record->time_in}";
+        }
+        elseif (!$record->time_out) {
+            if ($now->lt($signOutTime)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You cannot sign out before 14:00.'
+                ]);
+            }
+
+            $record->time_out = $now->format('H:i:s');
+            if (!$record->time_in) {
+                $record->status = 'Absent';
+            } elseif ($record->status != 'Late') {
+                $record->status = 'Present';
+            }
+
+            $record->save();
+
+            $actionPerformed = 'Time Out';
+            $description = "User marked time out at {$record->time_out}";
+        }
+        else {
+            return response()->json([
+                'success' => false,
+                'message' => 'You have already completed your attendance for today.'
+            ]);
         }
 
+        // Log audit with Spatie role
+        if ($actionPerformed) {
+            Audit::create([
+                'user_id'    => $user->id,
+                'role' => $user->getRoleNames()->implode(', '),
+                'action'     => $actionPerformed,
+                'target'     => 'Attendance',
+                'ip_address' => $request->ip(),
+                'description'=> $description,
+            ]);
+        }
+
+        $record->load('user.department');
+
         return response()->json([
-            'message' => 'Attendance marked successfully!',
-            'time_in' => $record->time_in,
-            'time_out' => $record->time_out,
-            'status' => $record->status,
+            'success' => true,
+            'message' => $record->time_out ? 'Time Out recorded!' : 'Time In recorded!',
+            'attendance' => [
+                'id' => $record->id,
+                'date' => $record->date,
+                'time_in' => $record->time_in,
+                'time_out' => $record->time_out,
+                'status' => $record->status,
+                'user_name' => $record->user->name ?? '-',
+                'department' => $record->user->department->name ?? '-',
+            ]
         ]);
     }
-   // Show force change password form
-public function showForceChangePassword()
-{
-    return view('user.force_change_password');
-}
 
-// Update password
-public function updateForceChangePassword(Request $request)
-{
-    $request->validate([
-        'password' => 'required|min:6|confirmed',
-    ]);
+    public function showForceChangePassword()
+    {
+        return view('auth.force-change-password');
+    }
 
-    $user = auth()->user();
-    $user->password = bcrypt($request->password);
-    $user->force_password_change = 0; // Mark as changed
-    $user->save();
+    public function updateForceChangePassword(Request $request)
+    {
+        $request->validate([
+            'password' => 'required|min:6|confirmed',
+        ]);
 
-    return redirect()->route('user.dashboard')->with('success', 'Password updated successfully!');
-}
+        $user = Auth::user();
+        $user->password = Hash::make($request->password);
+        $user->force_password_change = false;
+        $user->save();
 
-
+        return redirect()->route('user.dashboard')->with('success', 'Password changed successfully!');
+    }
 }

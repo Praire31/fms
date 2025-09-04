@@ -1,38 +1,50 @@
-{{-- resources/views/admin_dashboard.blade.php --}}
+{{-- resources/views/admin/dashboard.blade.php --}}
 @extends('layouts.admin-dashboard')
 
 @section('title', 'Admin Dashboard')
 
 @section('admin-content')
+
     <div class="dashboard-container">
+        {{-- Sidebar --}}
         <div class="sidebar">
             <h2>Admin Panel</h2>
 
-            <a href="#" class="tab-link active" data-target="profile">
-                <i class="fas fa-user"></i> Profile
-            </a>
+            <a href="#" class="tab-link active" data-target="profile"><i class="fas fa-user"></i> Profile</a>
 
-            <!-- Manage Dropdown Start -->
             <input type="checkbox" id="manage-toggle" />
             <label for="manage-toggle"><i class="fas fa-cogs"></i> Manage ▼</label>
             <div class="dropdown-content">
-                <a href="#" class="tab-link" data-target="users"><i class="fas fa-users"></i> Users</a>
-                <a href="#" class="tab-link" data-target="departments"><i class="fas fa-building"></i> Departments</a>
-            </div>
-            <!-- Manage Dropdown End -->
+                @can('users.manage')
+                    <a href="#" class="tab-link" data-target="users"><i class="fas fa-users"></i> Users</a>
+                @endcan
 
-            <a href="#" class="tab-link" data-target="reports"><i class="fas fa-calendar-check"></i> Attendance Reports</a>
-            <a href="{{ route('logout') }}" class="logout"> <i class="fas fa-sign-out-alt"></i> Logout</a>
+                @can('departments.manage')
+                    <a href="#" class="tab-link" data-target="departments"><i class="fas fa-building"></i> Departments</a>
+                @endcan
+            </div>
+            @can('attendance.view')
+                <a href="#" class="tab-link" data-target="reports"><i class="fas fa-calendar-check"></i> Attendance Reports</a>
+            @endcan
+
+            @can('audits.view')
+                <a href="#" class="tab-link" data-target="audits"><i class="fas fa-file-alt"></i> Audits</a>
+            @endcan
+
+            <a href="#" class="tab-link" data-target="attendance-manual"><i class="fas fa-pencil-alt"></i> Manual
+                Attendance</a>
+
+
+            <a href="{{ route('logout') }}" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
 
-        
+        {{-- Main Content --}}
         <div class="main-content">
+
             {{-- Profile Section --}}
             <div id="profile" class="content-section active">
-                <h2 style="margin-top: 20px; color: #333;">Welcome, {{ auth()->user()->name }}!</h2>
-                <div style="font-size: 40px; color: #555; margin-bottom: 20px;">
-                    <i class="fas fa-user-circle"></i>
-                </div>
+                <h2 style="margin-top:20px;color:#333;">Welcome, {{ auth()->user()->name }}!</h2>
+                <div style="font-size:40px;color:#555;margin-bottom:20px;"><i class="fas fa-user-circle"></i></div>
                 <div class="dashboard-cards">
                     <div class="card">
                         <h3>Total Departments</h3>
@@ -43,49 +55,105 @@
                         <div class="number">{{ $totalUsers }}</div>
                     </div>
                 </div>
+                <div class="dashboard-cards" style="margin-top:20px; display:flex; gap:20px; flex-wrap:wrap;">
+
+                    <!-- Today’s Attendance -->
+                    <div class="card"
+                        style="flex:1; min-width:150px; background-color:#4CAF50; color:white; text-align:center; padding:15px; border-radius:10px;">
+                        <h4>Today’s Attendance</h4>
+                        <p style="font-size:24px;">{{ $todayAttendance }} / {{ $totalUsers }}</p>
+                        <span style="font-size:30px;">📅</span>
+                    </div>
+
+                    <!-- Late Users -->
+                    <a href="{{ route('admin.attendance.reports', [
+        'tab' => 'reports',
+        'filter_type' => 'late'
+    ]) }}" style="flex:1; min-width:150px; background-color:#FF9800; color:white; text-align:center; padding:15px; border-radius:10px; text-decoration:none;">
+                        <h4>Late Users</h4>
+                        <p style="font-size:24px;">{{ $lateUsers }}</p>
+                        <span style="font-size:30px;">⏰</span>
+                    </a>
+
+                    <!-- Not Yet Checked In  -->
+                    <a href="{{ route('admin.attendance.reports', [
+        'tab' => 'reports',
+        'filter_type' => 'not_checked_in'
+    ]) }}" class="card"
+                        style="flex:1; min-width:150px; background-color:#F44336; color:white; text-align:center; padding:15px; border-radius:10px; text-decoration:none;">
+                        <h4>Not Checked In</h4>
+                        <p style="font-size:24px;">{{ $notCheckedIn }}</p>
+                        <span style="font-size:30px;">👤</span>
+                    </a>
+
+                </div>
+
+
+
             </div>
 
             {{-- Users Section --}}
             <div id="users" class="content-section">
                 <div class="card">
-                    <h2><i class="fas fa-users"></i> Manage Users</h2>
+                    <h2 style="margin-bottom:15px;"><i class="fas fa-users"></i> Manage Users</h2>
 
-                    {{-- Search Form --}}
-                    <form method="GET" action="{{ route('admin.dashboard') }}" class="flex gap-2 mb-4">
-                        <input type="text" name="search" placeholder="Search users..." value="{{ request('search') }}"
-                            class="input-field" />
-                        <button type="submit" class="btn btn-primary">Search</button>
-                        <a href="{{ route('admin.dashboard') }}" class="btn btn-secondary">Clear</a>
-                    </form>
+                    <div class="user-actions" style="margin-bottom:10px;">
+                        <button id="toggleAddUserBtn" class="btn add-btn">+ Add User</button>
 
-                    <!-- Add User Button -->
-                    <button id="toggleAddUserBtn" class="btn btn-success">+ Add User</button>
+                        <form method="GET" action="{{ route('admin.dashboard') }}" class="search-form">
+                            <input type="hidden" name="tab" value="users">
+                            <input type="text" name="search" placeholder="Search users..." value="{{ request('search') }}"
+                                class="input-field" />
+                            <button type="submit" class="btn search-btn">Search</button>
+                            <a href="{{ route('admin.dashboard', ['tab' => 'users']) }}" class="btn btn-secondary">Clear</a>
 
-                    <!-- Add User Form (hidden initially) -->
-                    <form id="addUserForm" method="POST" action="/admin/users" style="display: none; margin-bottom: 20px;">
+                        </form>
+                    </div>
+
+                    {{-- Add User Form --}}
+                    <form id="addUserForm" method="POST" action="{{ route('admin.users.store') }}"
+                        style="display:none;margin-bottom:20px;">
                         @csrf
-                        <input type="text" name="username" placeholder="Username" required
-                            style="padding:8px; margin-right:5px;">
-                        <input type="email" name="email" placeholder="Email" required
-                            style="padding:8px; margin-right:5px;">
+                        <input type="text" name="name" placeholder="Full Name" required
+                            style="padding:8px;margin-right:5px;">
+                        <input type="email" name="email" placeholder="Email" required style="padding:8px;margin-right:5px;">
                         <input type="password" name="password" placeholder="Password" required
-                            style="padding:8px; margin-right:5px;">
-                        <select name="department_id" required style="padding:8px; margin-right:5px;">
+                            style="padding:8px;margin-right:5px;">
+                        <select name="department_id" required style="padding:8px;margin-right:5px;">
                             <option value="" disabled selected>Select Department</option>
                             @foreach($departments as $dept)
                                 <option value="{{ $dept->id }}">{{ $dept->name }}</option>
                             @endforeach
                         </select>
                         <button type="submit" class="btn btn-primary">Add User</button>
+                        <a href="{{ route('admin.dashboard', ['tab' => 'users']) }}" class="btn btn-secondary">Cancel</a>
                     </form>
 
+                    {{-- Edit User Form --}}
+                    <form id="editUserForm" method="POST" style="display:none;margin-bottom:20px;">
+                        @csrf
+                        @method('PATCH')
+                        <input type="hidden" name="id" id="editUserId">
+                        <input type="text" name="name" id="editUsername" placeholder="Full Name" required
+                            style="padding:8px;margin-right:5px;">
+                        <input type="email" name="email" id="editEmail" placeholder="Email" required
+                            style="padding:8px;margin-right:5px;">
+                        <select name="department_id" id="editDepartmentId" required style="padding:8px;margin-right:5px;">
+                            <option value="" disabled>Select Department</option>
+                            @foreach($departments as $dept)
+                                <option value="{{ $dept->id }}">{{ $dept->name }}</option>
+                            @endforeach
+                        </select>
+                        <button type="submit" class="btn btn-primary">Update User</button>
+                        <button type="button" class="btn btn-secondary" onclick="hideEditUserForm()">Cancel</button>
+                    </form>
 
                     {{-- Users Table --}}
                     <table class="table">
                         <thead>
                             <tr>
                                 <th>#</th>
-                                <th>Username</th>
+                                <th>Name</th>
                                 <th>Email</th>
                                 <th>Department</th>
                                 <th>Actions</th>
@@ -95,13 +163,15 @@
                             @foreach($users as $index => $user)
                                 <tr>
                                     <td>{{ $index + 1 }}</td>
-                                    <td>{{ $user->username }}</td>
+                                    <td>{{ $user->name }}</td>
                                     <td>{{ $user->email }}</td>
-                                    <td>{{ $user->department->name ?? '-' }}</td>
+                                    <td>{{ $user->department->name ?? 'N/A' }}</td>
+                                    <td>{{ $user->getRoleNames()->implode(', ') ?: 'No Role' }}</td>
                                     <td>
-                                        <!-- Edit/Delete buttons -->
-                                        <a href="/admin/users/{{ $user->id }}/edit" class="btn btn-warning btn-sm">Edit</a>
-                                        <form action="/admin/users/{{ $user->id }}" method="POST" style="display:inline;">
+                                        <a href="#" class="btn btn-warning btn-sm"
+                                            onclick="showEditUserForm({{ $user->id }}, '{{ $user->name }}', '{{ $user->email }}', {{ $user->department_id ?? 'null' }})">Edit</a>
+                                        <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST"
+                                            style="display:inline;">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" onclick="return confirm('Are you sure?')"
@@ -112,168 +182,404 @@
                             @endforeach
                         </tbody>
                     </table>
-
-
-                    {{-- Departments Section --}}
-                    <div id="departments" class="content-section">
-                        <div class="card">
-                            <h2><i class="fas fa-building"></i> Manage Departments</h2>
-
-                            <!-- Add Department Button -->
-                            <button id="toggleAddDeptBtn" class="btn btn-success">+ Add Department</button>
-
-                            <!-- Add Department Form (hidden initially) -->
-                            <form id="addDeptForm" method="POST" action="/admin/departments"
-                                style="display: none; margin-bottom: 20px;">
-                                @csrf
-                                <input type="text" name="name" placeholder="Department Name" required
-                                    style="padding:8px; margin-right:5px;">
-                                <button type="submit" class="btn btn-primary">Add Department</button>
-                            </form>
-
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Department Name</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($departments as $index => $dept)
-                                        <tr>
-                                            <td>{{ $index + 1 }}</td>
-                                            <td>{{ $dept->name }}</td>
-                                            <td>
-                                                <!-- Edit Button -->
-                                                <button class="btn btn-warning btn-sm"
-                                                    onclick="showEditDeptForm({{ $dept->id }}, '{{ $dept->name }}')">
-                                                    Edit
-                                                </button>
-
-                                                <!-- Delete Form -->
-                                                <form action="/admin/departments/{{ $dept->id }}" method="POST"
-                                                    style="display:inline;">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" onclick="return confirm('Are you sure?')"
-                                                        class="btn btn-danger btn-sm">Delete</button>
-                                                </form>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-
-                        </div>
-                    </div>
-
-                    {{-- Reports Section --}}
-                    <div id="reports" class="content-section">
-                        <div class="card">
-                            <h2><i class="fas fa-calendar-check"></i> Attendance Reports</h2>
-
-                            <form method="GET" action="{{ route('admin.dashboard') }}" class="flex gap-2 flex-wrap mb-4">
-                                <select name="filter_user" class="input-field">
-                                    <option value="">All Users</option>
-                                    @foreach($usersForFilter as $user)
-                                        <option value="{{ $user->username }}" {{ request('filter_user') == $user->username ? 'selected' : '' }}>{{ $user->username }}</option>
-                                    @endforeach
-                                </select>
-
-                                <select name="filter_department" class="input-field">
-                                    <option value="">All Departments</option>
-                                    @foreach($departmentsForFilter as $dept)
-                                        <option value="{{ $dept->name }}" {{ request('filter_department') == $dept->name ? 'selected' : '' }}>{{ $dept->name }}</option>
-                                    @endforeach
-                                </select>
-
-                                <input type="date" name="start_date" value="{{ request('start_date') }}" />
-                                <input type="date" name="end_date" value="{{ request('end_date') }}" />
-
-                                <select name="filter_status" class="input-field">
-                                    <option value="all" {{ request('filter_status') == 'all' ? 'selected' : '' }}>All Status
-                                    </option>
-                                    <option value="Present" {{ request('filter_status') == 'Present' ? 'selected' : '' }}>
-                                        Present</option>
-                                    <option value="Absent" {{ request('filter_status') == 'Absent' ? 'selected' : '' }}>Absent
-                                    </option>
-                                    <option value="Late" {{ request('filter_status') == 'Late' ? 'selected' : '' }}>Late
-                                    </option>
-                                    <option value="On Leave" {{ request('filter_status') == 'On Leave' ? 'selected' : '' }}>On
-                                        Leave</option>
-                                </select>
-
-                                <div class="flex gap-2">
-                                    <button type="submit" class="btn btn-primary">Apply Filters</button>
-                                    <a href="{{ route('admin.dashboard') }}" class="btn btn-secondary">Clear Filters</a>
-                                </div>
-                            </form>
-
-                            {{-- Attendance Table --}}
-                            <table class="table-auto">
-                                <thead class="bg-blue-700 text-white">
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Username</th>
-                                        <th>Department</th>
-                                        <th>Date</th>
-                                        <th>Time In</th>
-                                        <th>Time Out</th>
-                                        <th>Total Hours</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @forelse($attendanceRecords as $index => $row)
-                                        <tr class="{{ $index % 2 == 0 ? 'bg-gray-100' : 'bg-white' }}">
-                                            <td>{{ $index + 1 }}</td>
-                                            <td>{{ $row->username }}</td>
-                                            <td>{{ $row->department }}</td>
-                                            <td>{{ $row->date }}</td>
-                                            <td>{{ $row->time_in ?? '-' }}</td>
-                                            <td>{{ $row->time_out ?? '-' }}</td>
-                                            <td>
-                                                @if($row->time_in && $row->time_out)
-                                                    {{ \Carbon\Carbon::parse($row->time_in)->diff(\Carbon\Carbon::parse($row->time_out))->format('%h h %i m') }}
-                                                @else
-                                                    -
-                                                @endif
-                                            </td>
-                                            <td>{{ $row->status }}</td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="8" class="text-center">No attendance records found.</td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
                 </div>
             </div>
 
-            {{-- Add any JS for toggling forms --}}
-            <script>
-            
-document.addEventListener("DOMContentLoaded", function () {
-    const links = document.querySelectorAll(".sidebar a[data-section]");
-    const sections = document.querySelectorAll(".content-section");
+            {{-- Departments Section --}}
+            <div id="departments" class="content-section">
+                <div class="card">
+                    <h2><i class="fas fa-building"></i> Manage Departments</h2>
 
-    links.forEach(link => {
-        link.addEventListener("click", function (e) {
-            e.preventDefault();
+                    <div class="department-actions" style="margin-bottom:15px;">
+                        <button id="toggleAddDeptBtn" class="btn btn-success">+ Add Department</button>
+                        <form id="addDeptForm" method="POST" action="{{ route('admin.departments.store') }}"
+                            style="display:none;">
+                            @csrf
+                            <input type="text" name="name" placeholder="Department Name" required
+                                style="padding:8px;margin-right:5px;">
+                            <button type="submit" class="btn btn-primary">Add Department</button>
+                            <a href="{{ route('admin.dashboard', ['tab' => 'departments']) }}"
+                                class="btn btn-secondary">Cancel</a>
+                        </form>
+                    </div>
 
-            // Hide all sections
-            sections.forEach(section => section.classList.remove("active"));
+                    {{-- Edit Department Form --}}
+                    <form id="editDeptForm" method="POST" style="display:none;margin-bottom:20px;">
+                        @csrf
+                        @method('PATCH')
+                        <input type="hidden" name="id" id="editDeptId">
+                        <input type="text" name="name" id="editDeptName" placeholder="Department Name" required
+                            style="padding:8px;margin-right:5px;">
+                        <button type="submit" class="btn btn-primary">Update Department</button>
+                        <button type="button" class="btn btn-secondary" onclick="hideEditDeptForm()">Cancel</button>
+                    </form>
 
-            // Get the clicked section
-            const target = this.getAttribute("data-section");
-            document.getElementById(target).classList.add("active");
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Department Name</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($departments as $index => $dept)
+                                <tr>
+                                    <td>{{ $index + 1 }}</td>
+                                    <td>{{ $dept->name }}</td>
+                                    <td>
+                                        <button class="btn btn-warning btn-sm"
+                                            onclick="showEditDeptForm({{ $dept->id }}, '{{ $dept->name }}')">Edit</button>
+                                        <form action="{{ route('admin.departments.delete', $dept->id) }}" method="POST"
+                                            style="display:inline;">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" onclick="return confirm('Are you sure?')"
+                                                class="btn btn-danger btn-sm">Delete</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {{-- Attendance Reports Section --}}
+            <div id="reports" class="content-section">
+                <div class="card">
+                    <h2 style="margin-bottom:15px;"><i class="fas fa-reports"></i> Attendance Reports</h2>
+
+                    <div class="attendance-filters" style="margin-bottom:15px;">
+                        <form method="GET" action="{{ route('admin.attendance.reports') }}" class="flex gap-2 flex-wrap">
+                            <select name="filter_user" class="input-field">
+                                <option value="">All Users</option>
+                                @foreach($usersForFilter as $user)
+                                    <option value="{{ $user->id }}" {{ request('filter_user') == $user->id ? 'selected' : '' }}>
+                                        {{ $user->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+
+                            <select name="filter_department" class="input-field">
+                                <option value="">All Departments</option>
+                                @foreach($departmentsForFilter as $dept)
+                                    <option value="{{ $dept->id }}" {{ request('filter_department') == $dept->id ? 'selected' : '' }}>{{ $dept->name }}</option>
+                                @endforeach
+                            </select>
+
+                            <input type="date" name="start_date" value="{{ request('start_date') }}" />
+                            <input type="date" name="end_date" value="{{ request('end_date') }}" />
+
+                            <select name="filter_status" class="input-field">
+                                <option value="all" {{ request('filter_status') == 'all' ? 'selected' : '' }}>All Status
+                                </option>
+                                <option value="Present" {{ request('filter_status') == 'Present' ? 'selected' : '' }}>Present
+                                </option>
+                                <option value="Absent" {{ request('filter_status') == 'Absent' ? 'selected' : '' }}>Absent
+                                </option>
+                                <option value="Late" {{ request('filter_status') == 'Late' ? 'selected' : '' }}>Late</option>
+                                <option value="On Leave" {{ request('filter_status') == 'On Leave' ? 'selected' : '' }}>On
+                                    Leave</option>
+                            </select>
+
+                            <button type="submit" class="btn btn-primary">Apply Filters</button>
+                            <a href="{{ route('admin.attendance.reports') }}" class="btn btn-secondary">Clear Filters</a>
+
+                            {{-- Delete Records --}}
+                            @if(auth()->user()->hasRole('Super Admin'))
+                                <button type="submit" formaction="{{ route('admin.attendance.deleteFiltered') }}"
+                                    formmethod="POST" class="btn btn-danger"
+                                    onclick="return confirm('Are you sure you want to delete these filtered attendance records?')">
+                                    @csrf
+                                    Delete Records
+                                </button>
+                            @else
+                                {{-- Admin sees alert instead of submitting --}}
+                                <button type="button" class="btn btn-danger" onclick="alert('❌ Permission denied')">
+                                    Delete Records
+                                </button>
+                            @endif
+                        </form>
+                    </div>
+
+                    @php $counter = 1; @endphp
+                    <table class="table-auto">
+                        <thead class="bg-blue-700 text-white">
+                            <tr>
+                                <th>#</th>
+                                <th>Name</th>
+                                <th>Department</th>
+                                <th>Date</th>
+                                <th>Time In</th>
+                                <th>Time Out</th>
+                                <th>Total Hours</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($attendanceRecords as $row)
+                                <tr class="{{ $counter % 2 == 0 ? 'bg-gray-100' : 'bg-white' }}">
+                                    <td>{{ $counter++ }}</td>
+                                    <td>{{ $row->user->name ?? '-' }}</td>
+                                    <td>{{ $row->user->department->name ?? '-' }}</td>
+                                    <td>{{ $row->date }}</td>
+                                    <td>{{ $row->time_in ?? '-' }}</td>
+                                    <td>{{ $row->time_out ?? '-' }}</td>
+                                    <td>
+                                        @if($row->time_in && $row->time_out)
+                                            {{ \Carbon\Carbon::parse($row->time_in)->diff(\Carbon\Carbon::parse($row->time_out))->format('%h h %i m') }}
+                                        @else
+
+                                        @endif
+                                    </td>
+                                    <td>{{ $row->status }}</td>
+                                </tr>
+                            @empty
+
+                            @endforelse
+
+                            {{-- Add Not Checked In Users --}}
+                            @if(isset($filterType) && $filterType === 'not_checked_in' && isset($notCheckedInUsers) && $notCheckedInUsers->count() > 0)
+                                @foreach($notCheckedInUsers as $user)
+                                    <tr class="{{ $counter % 2 == 0 ? 'bg-gray-100' : 'bg-white' }}">
+                                        <td>{{ $counter++ }}</td>
+                                        <td>{{ $user->name }}</td>
+                                        <td>{{ $user->department->name ?? '-' }}</td>
+                                        <td>{{ \Carbon\Carbon::today()->toDateString() }}</td>
+                                        <td>-</td>
+                                        <td>-</td>
+                                        <td>-</td>
+                                        <td>Not Checked In</td>
+                                    </tr>
+                                @endforeach
+                            @endif
+
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {{-- AUDIT LOGS SECTION --}}
+            <div id="audits" class="content-section">
+                <h2 style="margin-bottom:15px;"><i class="fas fa-audits"></i>Audit Logs</h2>
+
+                {{-- Audits Filters and Delete Section --}} <div class="audits-filters mb-4">
+
+                    <!-- Apply Filters Form -->
+                    <form method="GET" action="{{ route('admin.audits') }}" class="flex gap-2 flex-wrap mb-6">
+                        <select name="filter_user" class="input-field">
+                            <option value="">All Users</option>
+                            @foreach($usersForFilter as $user)
+                                <option value="{{ $user->id }}" {{ request('filter_user') == $user->id ? 'selected' : '' }}>
+                                    {{ $user->name }}
+                                </option>
+                            @endforeach
+                        </select>
+
+                        <select name="filter_role" class="input-field">
+                            <option value="">All Roles</option>
+                            @foreach($rolesForFilter as $role)
+                                <option value="{{ $role }}" {{ request('filter_role') == $role ? 'selected' : '' }}>
+                                    {{ $role }}
+                                </option>
+                            @endforeach
+                        </select>
+
+                        <select name="filter_action" class="input-field">
+                            <option value="">All Actions</option>
+                            @foreach($actionsForFilter as $action)
+                                <option value="{{ $action }}" {{ request('filter_action') == $action ? 'selected' : '' }}>
+                                    {{ $action }}
+                                </option>
+                            @endforeach
+                        </select>
+
+                        <input type="date" name="start_date" value="{{ request('start_date') }}">
+                        <input type="date" name="end_date" value="{{ request('end_date') }}">
+
+                        <button type="submit" class="btn btn-primary">Apply Filters</button>
+
+                        <!-- Clear Filters keeps the tab active -->
+                        <a href="{{ route('admin.audits') }}" class="btn btn-secondary">Clear Filters</a>
+
+                        {{-- Delete Records by Filter --}}
+                        <button type="submit" formaction="{{ route('admin.audits.deleteFiltered') }}" formmethod="POST"
+                            class="btn btn-danger" onclick="return confirm('Delete filtered records?')">
+                            @csrf
+                            Delete Records
+                        </button>
+                    </form>
+
+                </div>
+
+
+
+
+                <table class="table-auto">
+                    <thead style="background: #004466; color: white;">
+                        <tr>
+                            <th>User</th>
+                            <th>Role</th>
+                            <th>Action</th>
+                            <th>Target</th>
+                            <th>IP Address</th>
+                            <th>Date & Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($audits as $audit)
+                            @if($audit->user) <!-- just make sure the user exists -->
+                                <tr>
+                                    <td>{{ $audit->user->name ?? 'System' }}</td>
+                                    <td>{{ $audit->role ?? '-' }}</td>
+                                    <td>{{ $audit->action }}</td>
+                                    <td>{{ $audit->target ?? '-' }}</td>
+                                    <td>{{ $audit->ip_address ?? '-' }}</td>
+                                    <td>{{ $audit->created_at->format('Y-m-d H:i:s') }}</td>
+                                </tr>
+                            @endif
+                        @empty
+                            <tr>
+                                <td colspan="6" style="text-align:center;">No audit records found</td>
+                            </tr>
+
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Manual Attendance Section -->
+            <div id="attendance-manual" class="content-section">
+                <div class="card">
+                    <h2>Manual Attendance Input</h2>
+
+                    @if(session('success'))
+                        <div style="color:green; margin-bottom:10px;">
+                            {{ session('success') }}
+                        </div>
+                    @endif
+
+                    <!-- Manual Attendance Form -->
+                    <form action="{{ route('attendance.manual.store') }}" method="POST"
+                        style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">
+                        @csrf
+                        <label>User</label>
+                        <select name="user_id" required>
+                            <option value="" disabled selected>Select User</option>
+                            @foreach($users as $user)
+                                <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->department->name ?? '-' }})
+                                </option>
+                            @endforeach
+                        </select>
+
+                        <label>Date</label>
+                        <input type="date" name="date" required>
+
+                        <label>Time In</label>
+                        <input type="time" name="time_in">
+
+                        <label>Time Out</label>
+                        <input type="time" name="time_out">
+
+                        <label>Status</label>
+                        <select name="status" class="form-control" required>
+                            <option value="Present">Present</option>
+                            <option value="Absent">Absent</option>
+                            <option value="Late">Late</option>
+                            <option value="On Leave">On Leave</option>
+                        </select>
+
+                        <button type="submit"
+                            style="background:#0077aa;color:white;padding:8px 15px;border:none;border-radius:4px;">Save</button>
+                    </form>
+
+
+
+                </div>
+            </div>
+
+
+
+        </div> {{-- main-content ends --}}
+    </div> {{-- dashboard-container ends --}}
+
+    {{-- JS for toggling sections and forms --}}
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const links = document.querySelectorAll(".sidebar a[data-target]");
+            const sections = document.querySelectorAll(".content-section");
+
+            // Tab click event
+            links.forEach(link => {
+                link.addEventListener("click", function (e) {
+                    e.preventDefault();
+                    links.forEach(l => l.classList.remove("active"));
+                    this.classList.add("active");
+                    sections.forEach(s => s.classList.remove("active"));
+                    const target = this.getAttribute("data-target");
+                    document.getElementById(target).classList.add("active");
+
+                    // Store active tab in URL
+                    const url = new URL(window.location);
+                    url.searchParams.set("tab", target);
+                    window.history.pushState({}, "", url);
+                });
+            });
+
+            // Toggle Add User Form
+            const addUserBtn = document.getElementById('toggleAddUserBtn');
+            const addUserForm = document.getElementById('addUserForm');
+            if (addUserBtn) {
+                addUserBtn.addEventListener('click', () => {
+                    addUserForm.style.display = addUserForm.style.display === 'none' ? 'block' : 'none';
+                });
+            }
+
+            // Toggle Add Department Form
+            const addDeptBtn = document.getElementById('toggleAddDeptBtn');
+            const addDeptForm = document.getElementById('addDeptForm');
+            if (addDeptBtn) {
+                addDeptBtn.addEventListener('click', () => {
+                    addDeptForm.style.display = addDeptForm.style.display === 'none' ? 'block' : 'none';
+                });
+            }
+
+            // Restore Active Tab from URL or Controller
+            const urlParams = new URLSearchParams(window.location.search);
+            let activeTab = urlParams.get('tab');
+            if (!activeTab) activeTab = "{{ $activeTab ?? 'profile' }}";
+            links.forEach(l => l.classList.remove("active"));
+            sections.forEach(s => s.classList.remove("active"));
+            const link = document.querySelector(`.sidebar a[data-target='${activeTab}']`);
+            const section = document.getElementById(activeTab);
+            if (link) link.classList.add("active");
+            if (section) section.classList.add("active");
         });
-    });
-});
-        </script>
 
+        // Show Edit User Form
+        function showEditUserForm(id, name, email, departmentId) {
+            const form = document.getElementById('editUserForm');
+            form.style.display = 'block';
+            form.action = '/admin/users/update/' + id;
+            document.getElementById('editUserId').value = id;
+            document.getElementById('editUsername').value = name;
+            document.getElementById('editEmail').value = email;
+            document.getElementById('editDepartmentId').value = departmentId;
+            window.scrollTo({ top: form.offsetTop, behavior: 'smooth' });
+        }
+
+        // Show Edit Department Form
+        function showEditDeptForm(id, name) {
+            const form = document.getElementById('editDeptForm');
+            form.style.display = 'block';
+            form.action = '/admin/departments/update/' + id; // POST route
+            document.getElementById('editDeptId').value = id;
+            document.getElementById('editDeptName').value = name;
+            window.scrollTo({ top: form.offsetTop, behavior: 'smooth' });
+        }
+
+        function hideEditUserForm() { document.getElementById('editUserForm').style.display = 'none'; }
+        function hideEditDeptForm() { document.getElementById('editDeptForm').style.display = 'none'; }
+    </script>
 @endsection

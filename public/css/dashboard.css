@@ -9,7 +9,7 @@ body {
   height: 100vh;
 }
 
-/* Sidebar */
+/* Sidebar */ 
 .sidebar {
   width: 240px;
   background-color: #005580;
@@ -117,16 +117,22 @@ input[type='checkbox']:checked + label + .dropdown-content {
 table {
   width: 100%;
   border-collapse: collapse;
+  text-align: left;
 }
 
 th, td {
-  padding: 10px;
+  padding: 8px 12px;
   border-bottom: 1px solid #ddd;
+  vertical-align: middle;
 }
 
 thead {
   background-color: #0077aa;
   color: white;
+}
+
+td.btn{
+  margin-right: 5px;
 }
 
 /* Logout */
@@ -148,3 +154,131 @@ thead {
   border: 1px solid #ccc;
   border-radius: 4px;
 }
+
+.user-actions {
+    display: flex;            
+    flex-wrap: wrap;          
+    gap: 10px;                
+    margin-bottom: 20px;      
+    align-items: center;      
+}
+
+.search-form {
+    display: flex;            
+    flex-wrap: wrap;          
+    gap: 5px;                
+    flex: 1;                  
+}
+
+.input-field {
+   flex: 1;                  
+    min-width: 150px;         
+    padding: 5px 10px;       
+    font-size: 14px;          
+    border-radius: 6px;         
+}
+
+.btn {
+    padding: 5px 10px;       
+    font-size: 16px;          
+    border-radius: 6px;
+}
+
+.department-actions {
+    margin-top: 15px;      
+    margin-bottom: 20px;  
+        display: flex;          
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;    
+}
+
+/* Attendance Reports Filters */
+.attendance-filters 
+.audit-filters{
+    display: flex;           
+    flex-wrap: wrap;         
+    gap: 10px; 
+    margin-top: 20px;              
+    margin-bottom: 20px;     
+    align-items: center; 
+        
+}
+
+.attendance-filters select,
+.audit-filters select,
+.audit-filters .input-field,
+.attendance-filters input[type="date"] {
+    padding: 6px 10px;     
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    min-width: 120px;      
+  }
+
+.audit-filters .btn,
+.attendance-filters .btn {
+    padding: 6px 12px;       
+}
+
+.inline-block {
+    display: inline-block;
+    margin-left: 8px; /* optional spacing */
+}
+
+
+
+.table-auto {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;        
+}
+
+.table-auto th,
+.table-auto td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #ccc;
+}
+
+.table-auto th {
+    background-color: #004466; 
+    color: white;
+    text-align: left;
+}
+
+.table-auto tr:nth-child(even) {
+    background-color: #f2f2f2;
+  }
+
+  .input-field {
+  min-width: 120px;
+  max-width: 180px;
+}
+
+.dashboard-widgets .widget {
+    flex: 1;
+    text-align: center;
+    padding: 20px;
+    border-radius: 12px;
+}
+
+.dashboard-widgets a.widget {
+    color: inherit; /* Keep text color */
+    text-decoration: none; /* Remove underline */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+
+.dashboard-widgets .widget h3 {
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+}
+
+.dashboard-widgets .widget p {
+    font-size: 2rem;
+    font-weight: bold;
+}
+
+
